@@ -1076,3 +1076,22 @@ button {
 
 .month-row-total { font-size: 14px; font-weight: 700; }
 .month-row-change { font-size: 12px; font-weight: 600; color: var(--inkMuted); }
+
+.breakdown-count {
+  font-weight: 500;
+  color: var(--inkMuted);
+}
+
+.by-category {
+  padding: 18px 22px 20px;
+  border-radius: 16px;
+  margin-bottom: 14px;
+}
+
+.by-category .breakdown { margin-top: 14px; }
+
+.by-category-empty {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--inkMuted);
+}

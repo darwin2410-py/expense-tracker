@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { formatIDR, formatNumber, getMonthKey, getTodayKey, monthLabel, monthRange, monthlyStats, monthsBack, shiftMonth, shortMonthLabel } from '../utils'
 import Chip from './Chip'
+import CategoryBreakdown from './CategoryBreakdown'
 
 const RANGES = [6, 12]
 
@@ -114,6 +115,13 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
             <div className="tile-label">Expenses</div>
             <div className="tile-value">{sel.count}</div>
           </div>
+        </div>
+
+        <div className="card by-category fade-up" style={{ animationDelay: '0.15s' }}>
+          <div className="summary-label">By category</div>
+          {sel.byCategory.length
+            ? <CategoryBreakdown rows={sel.byCategory} total={sel.total} showCount />
+            : <p className="by-category-empty">No expenses in {monthLabel(sel.month)}.</p>}
         </div>
 
         <button className="btn-outline open-month fade-up" onClick={() => onOpenMonth(sel.month)}>

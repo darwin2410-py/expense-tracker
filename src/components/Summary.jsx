@@ -1,4 +1,5 @@
-import { formatIDR, formatNumber, monthLabel, totalsByCategory } from '../utils'
+import { formatNumber, monthLabel, totalsByCategory } from '../utils'
+import CategoryBreakdown from './CategoryBreakdown'
 
 export default function Summary({ month, isCurrentMonth, expenses, categories, onPrev, onNext }) {
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
@@ -19,25 +20,7 @@ export default function Summary({ month, isCurrentMonth, expenses, categories, o
       </div>
 
       {rows.length > 0 && (
-        <ul className="breakdown">
-          {rows.map(r => {
-            const pct = Math.round(r.total / total * 100)
-            return (
-              <li key={r.id ?? 'none'}>
-                <div className="breakdown-head">
-                  <span className={`chip-dot${r.color ? '' : ' none'}`} style={r.color ? { '--chip-color': r.color } : undefined} />
-                  <span className="breakdown-name">{r.name}</span>
-                  <span className="breakdown-amount">{formatIDR(r.total)}</span>
-                  <span className="breakdown-pct">{pct}%</span>
-                </div>
-                <div className="breakdown-track">
-                  <div className={`breakdown-bar${r.color ? '' : ' none'}`}
-                    style={{ width: `${pct}%`, ...(r.color && { '--chip-color': r.color }) }} />
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+        <CategoryBreakdown rows={rows} total={total} />
       )}
     </div>
   )

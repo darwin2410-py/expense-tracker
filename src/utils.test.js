@@ -71,6 +71,7 @@ describe('totalsByCategory', () => {
       ['Food', 15000],
       ['Uncategorized', 3000],
     ])
+    expect(rows.map(r => r.count)).toEqual([1, 2, 2])
   })
 })
 
@@ -94,6 +95,7 @@ describe('monthlyStats', () => {
     expect(sep.total).toBe(150000)
     expect(sep.count).toBe(2)
     expect(sep.top.name).toBe('Bills')
+    expect(sep.byCategory.map(r => [r.name, r.total, r.count])).toEqual([['Bills', 90000, 1], ['Food', 60000, 1]])
   })
   it('compares with the month before', () => {
     expect(aug.change).toBe(null)
@@ -106,6 +108,6 @@ describe('monthlyStats', () => {
   })
   it('handles an empty month', () => {
     const [empty] = monthlyStats([], ['2026-07'], cats, '2026-10-10')
-    expect(empty).toMatchObject({ total: 0, count: 0, avgPerDay: 0, top: null, change: null })
+    expect(empty).toMatchObject({ total: 0, count: 0, avgPerDay: 0, top: null, byCategory: [], change: null })
   })
 })

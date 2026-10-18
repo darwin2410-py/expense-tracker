@@ -83,8 +83,10 @@ export function totalsByCategory(expenses, categories) {
   for (const e of expenses) {
     const cat = byId.get(e.category_id)
     const key = cat ? cat.id : null
-    if (!totals.has(key)) totals.set(key, { id: key, name: cat?.name || 'Uncategorized', color: cat?.color || null, total: 0 })
-    totals.get(key).total += e.amount
+    if (!totals.has(key)) totals.set(key, { id: key, name: cat?.name || 'Uncategorized', color: cat?.color || null, total: 0, count: 0 })
+    const row = totals.get(key)
+    row.total += e.amount
+    row.count += 1
   }
   return [...totals.values()].sort((a, b) => b.total - a.total)
 }
@@ -103,7 +105,7 @@ export function monthsBack(lastMonth, count) {
   return Array.from({ length: count }, (_, i) => shiftMonth(lastMonth, i - count + 1))
 }
 
-// Per month: total, count, average per day, biggest category and the change
+// Per month: total, count, average per day, spending per category and the change
 // against the month before. The current month averages over the days so far.
 export function monthlyStats(expenses, months, categories, todayKey) {
   const byMonth = new Map()
@@ -118,12 +120,14 @@ export function monthlyStats(expenses, months, categories, todayKey) {
     const total = list.reduce((sum, e) => sum + e.amount, 0)
     const prevTotal = (byMonth.get(shiftMonth(month, -1)) || []).reduce((sum, e) => sum + e.amount, 0)
     const days = month === currentMonth ? Number(todayKey.slice(8, 10)) : daysInMonth(month)
+    const byCategory = totalsByCategory(list, categories)
     return {
       month,
       total,
       count: list.length,
       avgPerDay: Math.round(total / days),
-      top: totalsByCategory(list, categories)[0] || null,
+      top: byCategory[0] || null,
+      byCategory,
       change: prevTotal ? Math.round((total - prevTotal) / prevTotal * 100) : null,
     }
   })
