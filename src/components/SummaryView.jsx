@@ -20,7 +20,8 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
   const today = getTodayKey()
   const currentMonth = getMonthKey(today)
   const [range, setRange] = useState(6)
-  const [expenses, setExpenses] = useState(null)
+  const [data, setData] = useState(null)
+  const [failed, setFailed] = useState(false)
   const [selected, setSelected] = useState(currentMonth)
 
   // Always load 13 months so the oldest month shown still has a "last month"
@@ -28,22 +29,39 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
     async function load() {
       const start = monthRange(shiftMonth(currentMonth, -12)).start
       const end = monthRange(currentMonth).end
-      const { data, error } = await supabase.from('expenses').select('amount, category_id, date')
-        .eq('user_id', userId).gte('date', start).lt('date', end)
-      if (error) console.error('summary error:', error)
-      setExpenses(data || [])
+      const [exp, inc] = await Promise.all([
+        supabase.from('expenses').select('amount, category_id, date').eq('user_id', userId).gte('date', start).lt('date', end),
+        supabase.from('incomes').select('amount, date').eq('user_id', userId).gte('date', start).lt('date', end),
+      ])
+      const error = exp.error || inc.error
+      if (error) { console.error('summary error:', error); setFailed(true); return }
+      setData({ expenses: exp.data, incomes: inc.data })
     }
     load()
   }, [userId, currentMonth])
 
-  if (!expenses) return (
+  if (failed) return (
+    <div className="page dotted">
+      <div className="container">
+        <div className="monthly-header fade-up">
+          <button className="btn-outline soft" onClick={onBack}>&#8249; Back</button>
+          <h1 className="serif">Summary</h1>
+        </div>
+        <div className="empty">
+          {navigator.onLine ? 'Could not load the summary. Try again later.' : 'The summary needs a connection. Try again when you are back online.'}
+        </div>
+      </div>
+    </div>
+  )
+
+  if (!data) return (
     <div className="loading serif">
       <div className="loading-mark">Rp</div>
       <div className="loading-text">Loading</div>
     </div>
   )
 
-  const stats = monthlyStats(expenses, monthsBack(currentMonth, range), categories, today)
+  const stats = monthlyStats(data.expenses, monthsBack(currentMonth, range), categories, today, data.incomes)
   const max = Math.max(...stats.map(s => s.total), 1)
   const sel = stats.find(s => s.month === selected) || stats[stats.length - 1]
 
@@ -115,6 +133,16 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
             <div className="tile-label">Expenses</div>
             <div className="tile-value">{sel.count}</div>
           </div>
+          {sel.income > 0 && <>
+            <div className="card tile">
+              <div className="tile-label">Income</div>
+              <div className="tile-value">{formatIDR(sel.income)}</div>
+            </div>
+            <div className="card tile">
+              <div className="tile-label">{sel.balance < 0 ? 'Over income' : 'Left over'}</div>
+              <div className={`tile-value${sel.balance < 0 ? ' up' : ' down'}`}>{formatIDR(Math.abs(sel.balance))}</div>
+            </div>
+          </>}
         </div>
 
         <div className="card by-category fade-up" style={{ animationDelay: '0.15s' }}>

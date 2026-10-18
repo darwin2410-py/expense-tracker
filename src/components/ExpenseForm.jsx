@@ -1,14 +1,32 @@
 import { useEffect, useState } from 'react'
 import CategoryPicker from './CategoryPicker'
-import { formatNumber, parseAmount, getTodayKey } from '../utils'
+import Chip from './Chip'
+import { formatNumber, parseAmount, getTodayKey, getMonthKey, monthLabel, ordinal, recurringDate } from '../utils'
 
-export default function ExpenseForm({ expense, categories, defaultCategoryId, onSave, onDelete, onCreateCategory, onClose }) {
-  const editing = !!expense
-  const [amount, setAmount] = useState(expense ? formatNumber(expense.amount) : '')
-  const [categoryId, setCategoryId] = useState(expense ? expense.category_id : defaultCategoryId)
-  const [note, setNote] = useState(expense?.note || '')
-  const [date, setDate] = useState(expense?.date || getTodayKey())
+const QUICK_AMOUNTS = [10000, 20000, 50000, 100000]
+
+// One form for three things: an expense or income entry (mode "entry"), or a
+// recurring expense (mode "recurring", which asks for a day of the month
+// instead of a date).
+export default function ExpenseForm({ entry, mode = 'entry', categories, defaultCategoryId, suggestions = [],
+  onSave, onDelete, onCreateCategory, onClose }) {
+  const editing = !!entry
+  const recurring = mode === 'recurring'
+  const [kind, setKind] = useState(entry?.kind || 'expense')
+  const [amount, setAmount] = useState(entry ? formatNumber(entry.amount) : '')
+  const [categoryId, setCategoryId] = useState(entry ? entry.category_id ?? null : defaultCategoryId)
+  const [categoryTouched, setCategoryTouched] = useState(editing)
+  const [note, setNote] = useState(entry?.note || '')
+  const [date, setDate] = useState(entry?.date || getTodayKey())
+  const [day, setDay] = useState(entry?.day_of_month || Number(getTodayKey().slice(8, 10)))
+  const [addNow, setAddNow] = useState(false)
   const [busy, setBusy] = useState(false)
+  const income = kind === 'income'
+  const today = getTodayKey()
+  const dayNumber = Math.min(31, Math.max(1, Number(day) || 1))
+  // A new rule whose day already passed this month is only added for this
+  // month when asked, so a bill paid by hand is not counted twice
+  const askAddNow = recurring && !editing && recurringDate(getMonthKey(today), dayNumber) <= today
 
   useEffect(() => {
     const onKey = e => e.key === 'Escape' && onClose()
@@ -21,25 +39,59 @@ export default function ExpenseForm({ expense, categories, defaultCategoryId, on
     setAmount(n ? formatNumber(n) : '')
   }
 
+  function pickCategory(id) {
+    setCategoryId(id)
+    setCategoryTouched(true)
+  }
+
+  // Picking a note used before also picks the category it was used with,
+  // unless a category was chosen by hand
+  function changeNote(value) {
+    setNote(value)
+    if (categoryTouched || income) return
+    const match = suggestions.find(s => s.note.toLowerCase() === value.trim().toLowerCase())
+    if (match && categories.some(c => c.id === match.category_id)) setCategoryId(match.category_id)
+  }
+
   async function submit(e) {
     e.preventDefault()
     const value = parseAmount(amount)
-    if (!value || !date) return
+    if (!value) return
+    const fields = { amount: value, note: note.trim() || null }
+    if (!income) fields.category_id = categoryId
+    if (recurring) {
+      fields.day_of_month = dayNumber
+      if (askAddNow && !addNow) fields.last_added_month = getMonthKey(today)
+    }
+    else { fields.date = date; fields.kind = kind }
+    if (!recurring && !date) return
     setBusy(true)
-    const ok = await onSave({ amount: value, category_id: categoryId, note: note.trim() || null, date })
+    const ok = await onSave(fields)
     if (!ok) setBusy(false)
   }
 
   async function createCategory(name, color) {
     const id = await onCreateCategory(name, color)
-    if (id) setCategoryId(id)
+    if (id) pickCategory(id)
     return !!id
   }
+
+  const noun = recurring ? 'recurring expense' : income ? 'income' : 'expense'
+  const title = `${editing ? 'Edit' : 'New'} ${noun}`
 
   return (
     <div className="overlay sheet-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
       <form className="sheet" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-        <h2 id="sheet-title" className="serif">{editing ? 'Edit expense' : 'New expense'}</h2>
+        <h2 id="sheet-title" className="serif">{title}</h2>
+
+        {!editing && !recurring && (
+          <div className="segmented" role="tablist">
+            <button type="button" role="tab" aria-selected={!income} className={!income ? 'active' : ''}
+              onClick={() => setKind('expense')}>Expense</button>
+            <button type="button" role="tab" aria-selected={income} className={income ? 'active income' : ''}
+              onClick={() => setKind('income')}>Income</button>
+          </div>
+        )}
 
         <div>
           <label className="field-label" htmlFor="amount">Amount</label>
@@ -49,25 +101,58 @@ export default function ExpenseForm({ expense, categories, defaultCategoryId, on
               placeholder="0" value={amount} onChange={e => changeAmount(e.target.value)}
               autoFocus={!editing} required />
           </div>
+          <div className="chip-row quick-amounts">
+            {QUICK_AMOUNTS.map(n => (
+              <Chip key={n} active={parseAmount(amount) === n} onClick={() => setAmount(formatNumber(n))}>
+                {formatNumber(n)}
+              </Chip>
+            ))}
+          </div>
         </div>
 
-        <div>
-          <span className="field-label">Category</span>
-          <CategoryPicker categories={categories} selectedId={categoryId}
-            onChange={setCategoryId} onCreate={createCategory} />
-        </div>
+        {!income && (
+          <div>
+            <span className="field-label">Category</span>
+            <CategoryPicker categories={categories} selectedId={categoryId}
+              onChange={pickCategory} onCreate={createCategory} />
+          </div>
+        )}
 
         <div>
           <label className="field-label" htmlFor="note">Note</label>
-          <input id="note" className="input" placeholder="Optional" maxLength={200}
-            value={note} onChange={e => setNote(e.target.value)} />
+          <input id="note" className="input" placeholder={income ? 'Salary, bonus, ...' : 'Optional'} maxLength={200}
+            list={income ? undefined : 'note-suggestions'} autoComplete="off"
+            value={note} onChange={e => changeNote(e.target.value)} />
+          {!income && (
+            <datalist id="note-suggestions">
+              {suggestions.map(s => <option key={s.note} value={s.note} />)}
+            </datalist>
+          )}
         </div>
 
-        <div>
-          <label className="field-label" htmlFor="date">Date</label>
-          <input id="date" className="input" type="date" required
-            value={date} onChange={e => setDate(e.target.value)} />
-        </div>
+        {recurring ? (
+          <div>
+            <label className="field-label" htmlFor="day">Day of the month</label>
+            <input id="day" className="input" type="number" inputMode="numeric" min={1} max={31} required
+              value={day} onChange={e => setDay(e.target.value)} />
+            <p className="field-hint">
+              Added on the {ordinal(dayNumber)} of every month when you open the app.
+              Shorter months use their last day.
+            </p>
+            {askAddNow && (
+              <label className="check-row">
+                <input type="checkbox" checked={addNow} onChange={e => setAddNow(e.target.checked)} />
+                Also add it to {monthLabel(getMonthKey(today))} now
+              </label>
+            )}
+          </div>
+        ) : (
+          <div>
+            <label className="field-label" htmlFor="date">Date</label>
+            <input id="date" className="input" type="date" required
+              value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+        )}
 
         <div className="sheet-actions">
           {editing && <button type="button" className="btn danger" onClick={onDelete} disabled={busy}>Delete</button>}

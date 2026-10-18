@@ -1,9 +1,11 @@
-import { formatNumber, monthLabel, totalsByCategory } from '../utils'
+import { formatIDR, formatNumber, monthLabel, totalsByCategory } from '../utils'
 import CategoryBreakdown from './CategoryBreakdown'
 
-export default function Summary({ month, isCurrentMonth, expenses, categories, onPrev, onNext }) {
+export default function Summary({ month, isCurrentMonth, expenses, incomeTotal, categories,
+  selectedCategory, onSelectCategory, onPrev, onNext }) {
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
   const rows = totalsByCategory(expenses, categories)
+  const balance = incomeTotal - total
 
   return (
     <div className="card summary fade-up" style={{ animationDelay: '0.05s' }}>
@@ -19,8 +21,17 @@ export default function Summary({ month, isCurrentMonth, expenses, categories, o
         {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'}
       </div>
 
+      {incomeTotal > 0 && (
+        <div className="income-line">
+          <span>Income <b>{formatIDR(incomeTotal)}</b></span>
+          <span className={balance < 0 ? 'negative' : 'positive'}>
+            {balance < 0 ? 'Over' : 'Left'} <b>{formatIDR(Math.abs(balance))}</b>
+          </span>
+        </div>
+      )}
+
       {rows.length > 0 && (
-        <CategoryBreakdown rows={rows} total={total} />
+        <CategoryBreakdown rows={rows} total={total} selectedId={selectedCategory} onSelect={onSelectCategory} />
       )}
     </div>
   )
