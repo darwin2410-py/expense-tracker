@@ -4,8 +4,12 @@ Simple expense tracker built with React, Vite and Supabase. Installable as a PWA
 
 Features:
 
-- Add, edit and delete expenses and income (amount in IDR, category, note, date)
-- Default categories, plus add, rename, recolor and delete your own
+- Quick Add screen with its own numpad (no phone keyboard): `00`, `000` and `jt` (times a million), favorite categories by use, date and note chips, Undo after saving
+- Bottom tab bar: Add, Activity, Budget, Insight, More
+- Edit and delete expenses and income from Activity
+- Default categories with emoji, plus add, rename, recolor, change the emoji and delete your own
+- Month can start on your payday (1-28): totals, budgets, lists, Summary and CSV follow it
+- Eye button hides every amount (kept per device)
 - Monthly total, breakdown per category and income vs spending
 - Monthly budgets, overall and per category
 - Recurring expenses (rent, internet, ...) added on their day each month
@@ -35,15 +39,16 @@ You can use the same values as the habit tracker.
 
 This app reuses the habit tracker's Supabase project and only adds two new tables.
 
-1. Open the SQL editor in Supabase and run `supabase/create_tables.sql`, then `supabase/add_budgets_income_recurring.sql`. They create:
+1. Open the SQL editor in Supabase and run `supabase/create_tables.sql`, then `supabase/add_budgets_income_recurring.sql`, then `supabase/add_settings_and_emoji.sql`. They create:
 
    | Table | Columns |
    | --- | --- |
-   | `expense_categories` | `id`, `user_id`, `name`, `color`, `created_at` |
+   | `expense_categories` | `id`, `user_id`, `name`, `color`, `emoji`, `created_at` |
    | `expenses` | `id`, `user_id`, `amount`, `category_id`, `note`, `date`, `recurring_id`, `created_at` |
    | `incomes` | `id`, `user_id`, `amount`, `note`, `date`, `created_at` |
    | `budgets` | `id`, `user_id`, `category_id` (empty for the overall budget), `amount`, `created_at` |
    | `recurring_expenses` | `id`, `user_id`, `amount`, `category_id`, `note`, `day_of_month`, `last_added_month`, `created_at` |
+   | `user_settings` | `user_id` (primary key), `period_start_day`, `hide_amounts`, `updated_at` |
 
    Row level security is on, so each user only sees their own rows. The habit tables (`habits`, `completions`, `categories`) are not changed. Expense categories use their own table because `categories` already belongs to the habit tracker.
 
@@ -71,5 +76,6 @@ npm test        # run unit tests
 ## How a few things work
 
 - **Recurring expenses** are added by the app, not by the database. When you open the app on or after a rule's day, it adds that month's expense once. If you skip a whole month without opening the app, that month is not filled in. The unique `(recurring_id, date)` constraint stops duplicates when two devices open at the same time.
-- **Offline**: expenses and income are cached per month on the device, and changes made offline wait in a queue (localStorage) until the connection is back. Categories, budgets and recurring rules need a connection to change.
+- **Payday periods**: with the month starting on the 25th, "September 2026" means 25 Sep - 24 Oct. Recurring expenses still use the calendar day of the month.
+- **Offline**: expenses and income are cached per month on the device, and changes made offline wait in a queue (localStorage) until the connection is back. Categories, budgets, recurring rules and settings need a connection to change.
 

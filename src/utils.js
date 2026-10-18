@@ -22,8 +22,13 @@ export function formatNumber(n) {
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
+// ponytail: module-level flag set by App before each render, so every
+// formatIDR call masks without threading a prop; a context if this grows
+let amountsHidden = false
+export function setAmountsHidden(hidden) { amountsHidden = hidden }
+
 export function formatIDR(n) {
-  return 'Rp ' + formatNumber(n)
+  return amountsHidden ? 'Rp •••••' : 'Rp ' + formatNumber(n)
 }
 
 // "Rp 25.000" -> 25000. Anything that is not a digit is ignored.
@@ -50,6 +55,74 @@ export function monthRange(monthKey) {
 export function monthLabel(monthKey) {
   const [y, m] = monthKey.split('-').map(Number)
   return `${MONTHS[m - 1]} ${y}`
+}
+
+// Budget periods start on a payday (1-28) instead of the 1st. A period is
+// named after the month it starts in, so with day 25, 2026-10-03 is in the
+// "2026-09" period (25 Sep - 24 Oct).
+export function periodKeyFor(dateKey, startDay = 1) {
+  const month = getMonthKey(dateKey)
+  return Number(dateKey.slice(8, 10)) >= startDay ? month : shiftMonth(month, -1)
+}
+
+// Start inclusive, end exclusive, like monthRange
+export function periodRange(periodKey, startDay = 1) {
+  return { start: `${periodKey}-${pad(startDay)}`, end: `${shiftMonth(periodKey, 1)}-${pad(startDay)}` }
+}
+
+function addDays(dateKey, n) {
+  const d = parseKey(dateKey)
+  d.setDate(d.getDate() + n)
+  return toDateKey(d)
+}
+
+function shortDate(dateKey) {
+  return `${Number(dateKey.slice(8, 10))} ${SHORT_MONTHS[Number(dateKey.slice(5, 7)) - 1]}`
+}
+
+// "September 2026 · 25 Sep – 24 Oct"
+export function periodLabel(periodKey, startDay = 1) {
+  const { start, end } = periodRange(periodKey, startDay)
+  return `${monthLabel(periodKey)} · ${shortDate(start)} – ${shortDate(addDays(end, -1))}`
+}
+
+function periodDays(periodKey, startDay) {
+  const { start, end } = periodRange(periodKey, startDay)
+  return Math.round((parseKey(end) - parseKey(start)) / 86400000)
+}
+
+// "Today · Thu 8 Oct", "Yesterday · Wed 7 Oct", "Tue 6 Oct"
+export function dateChipLabel(dateKey, todayKey) {
+  const d = parseKey(dateKey)
+  const day = `${DAY_NAMES[d.getDay()]} ${shortDate(dateKey)}`
+  if (dateKey === todayKey) return `Today · ${day}`
+  if (dateKey === addDays(todayKey, -1)) return `Yesterday · ${day}`
+  return day
+}
+
+const MAX_AMOUNT = 999_999_999_999
+
+// Numpad keys: '0'-'9', '00', '000', 'jt' (times a million) and 'back'.
+// A press that would go past MAX_AMOUNT is ignored.
+export function numpadPress(value, key) {
+  let next
+  if (key === 'back') next = Math.floor(value / 10)
+  else if (key === 'jt') next = value * 1_000_000
+  else if (key === '00') next = value * 100
+  else if (key === '000') next = value * 1000
+  else next = value * 10 + Number(key)
+  return next > MAX_AMOUNT ? value : next
+}
+
+// Categories by how often recent expenses used them; ties keep their own order
+export function favoriteCategories(categories, expenses, limit = 5) {
+  const uses = new Map()
+  for (const e of expenses) if (e.category_id) uses.set(e.category_id, (uses.get(e.category_id) || 0) + 1)
+  return categories
+    .map((c, i) => ({ c, i, n: uses.get(c.id) || 0 }))
+    .sort((a, b) => b.n - a.n || a.i - b.i)
+    .slice(0, limit)
+    .map(x => x.c)
 }
 
 export function dayLabel(dateKey, todayKey) {
@@ -83,7 +156,7 @@ export function totalsByCategory(expenses, categories) {
   for (const e of expenses) {
     const cat = byId.get(e.category_id)
     const key = cat ? cat.id : null
-    if (!totals.has(key)) totals.set(key, { id: key, name: cat?.name || 'Uncategorized', color: cat?.color || null, total: 0, count: 0 })
+    if (!totals.has(key)) totals.set(key, { id: key, name: cat?.name || 'Uncategorized', color: cat?.color || null, emoji: cat?.emoji || null, total: 0, count: 0 })
     const row = totals.get(key)
     row.total += e.amount
     row.count += 1
@@ -107,24 +180,26 @@ export function monthsBack(lastMonth, count) {
 
 // Per month: total, count, average per day, spending per category, income and
 // the change against the month before. The current month averages over the days so far.
-export function monthlyStats(expenses, months, categories, todayKey, incomes = []) {
+export function monthlyStats(expenses, months, categories, todayKey, incomes = [], startDay = 1) {
   const incomeByMonth = new Map()
   for (const i of incomes) {
-    const key = getMonthKey(i.date)
+    const key = periodKeyFor(i.date, startDay)
     incomeByMonth.set(key, (incomeByMonth.get(key) || 0) + i.amount)
   }
   const byMonth = new Map()
   for (const e of expenses) {
-    const key = getMonthKey(e.date)
+    const key = periodKeyFor(e.date, startDay)
     if (!byMonth.has(key)) byMonth.set(key, [])
     byMonth.get(key).push(e)
   }
-  const currentMonth = getMonthKey(todayKey)
+  const currentMonth = periodKeyFor(todayKey, startDay)
   return months.map(month => {
     const list = byMonth.get(month) || []
     const total = list.reduce((sum, e) => sum + e.amount, 0)
     const prevTotal = (byMonth.get(shiftMonth(month, -1)) || []).reduce((sum, e) => sum + e.amount, 0)
-    const days = month === currentMonth ? Number(todayKey.slice(8, 10)) : daysInMonth(month)
+    const days = month === currentMonth
+      ? Math.round((parseKey(todayKey) - parseKey(periodRange(month, startDay).start)) / 86400000) + 1
+      : periodDays(month, startDay)
     const byCategory = totalsByCategory(list, categories)
     const income = incomeByMonth.get(month) || 0
     return {
@@ -168,6 +243,7 @@ export function budgetStatus(expenses, budgets, categories) {
         categoryId: b.category_id,
         name: cat ? cat.name : 'All spending',
         color: cat ? cat.color : null,
+        emoji: cat ? cat.emoji || null : null,
         budget: b.amount,
         spent,
         left: b.amount - spent,

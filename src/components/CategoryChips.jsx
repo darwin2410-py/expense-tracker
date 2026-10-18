@@ -5,9 +5,9 @@ export default function CategoryChips({ categories, selectedId, onChange, emptyL
     <div className="chip-row">
       <Chip active={!selectedId} onClick={() => onChange(null)}>{emptyLabel}</Chip>
       {categories.map(c => (
-        <Chip key={c.id} dot color={c.color} active={selectedId === c.id}
+        <Chip key={c.id} dot={!c.emoji} color={c.color} active={selectedId === c.id}
           onClick={() => onChange(selectedId === c.id ? null : c.id)}>
-          {c.name}
+          {c.emoji && <span aria-hidden="true">{c.emoji}</span>}{c.name}
         </Chip>
       ))}
       {children}

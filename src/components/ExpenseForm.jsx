@@ -104,7 +104,7 @@ export default function ExpenseForm({ entry, mode = 'entry', categories, default
   return (
     <div className="overlay sheet-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
       <form className="sheet" ref={sheetRef} tabIndex={-1} onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="sheet-title">
-        <h2 id="sheet-title" className="serif">{title}</h2>
+        <h2 id="sheet-title" className="display">{title}</h2>
 
         {!editing && !recurring && (
           <div className="segmented" role="group" aria-label="Type">

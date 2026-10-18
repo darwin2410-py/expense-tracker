@@ -28,7 +28,7 @@ export default function Login() {
     <div className="page dotted">
       <div className="container">
         <form className="card login fade-up" onSubmit={submit}>
-          <h1 className="serif">My Expenses</h1>
+          <h1 className="display">My Expenses</h1>
           <p className="login-sub">{mode === 'signin' ? 'Sign in to continue' : 'Create your account'}</p>
           <input className="input" type="email" autoComplete="email" placeholder="Email"
             value={email} onChange={e => setEmail(e.target.value)} required />

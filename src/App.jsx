@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from './supabase'
-import { getTodayKey, getMonthKey, monthRange, monthLabel, shiftMonth, applyPending, budgetStatus,
-  dueRecurring, recurringDate, filterExpenses, formatIDR, noteSuggestions, toCSV } from './utils'
+import { getTodayKey, getMonthKey, monthLabel, shiftMonth, applyPending, budgetStatus, dueRecurring, recurringDate,
+  filterExpenses, formatIDR, noteSuggestions, toCSV, periodKeyFor, periodRange, periodLabel, favoriteCategories,
+  setAmountsHidden } from './utils'
 import { flush, readCache, readQueue, write, writeCache } from './offline'
 import { useTheme } from './hooks/useTheme'
 import Toast from './components/Toast'
@@ -11,20 +12,31 @@ import CategoryChips from './components/CategoryChips'
 import ExpenseList from './components/ExpenseList'
 import ExpenseForm from './components/ExpenseForm'
 import SummaryView from './components/SummaryView'
-import ManageView from './components/ManageView'
+import AddScreen from './components/AddScreen'
+import TabBar from './components/TabBar'
+import { BudgetsPanel, CategoriesPanel, RecurringPanel } from './components/Panels'
 
 const UNDO_MS = 5000
 const OFFLINE_MESSAGE = "You're offline. Try again when you're back online."
 
 const DEFAULT_CATEGORIES = [
-  { name: 'Food', color: '#D49B3A' },
-  { name: 'Transport', color: '#4A90D9' },
-  { name: 'Shopping', color: '#E85D9E' },
-  { name: 'Bills', color: '#8B5CF6' },
-  { name: 'Health', color: '#5B8C6F' },
-  { name: 'Entertainment', color: '#C4653A' },
-  { name: 'Other', color: '#8A847E' },
+  { name: 'Food', color: '#D49B3A', emoji: '🍜' },
+  { name: 'Transport', color: '#4A90D9', emoji: '🚗' },
+  { name: 'Shopping', color: '#E85D9E', emoji: '🛍️' },
+  { name: 'Bills', color: '#8B5CF6', emoji: '🧾' },
+  { name: 'Health', color: '#5B8C6F', emoji: '💊' },
+  { name: 'Entertainment', color: '#C4653A', emoji: '🎬' },
+  { name: 'Other', color: '#8A847E', emoji: '📦' },
 ]
+
+const TITLES = { add: 'Add', activity: 'Activity', budget: 'Budget', insight: 'Insight', more: 'More' }
+
+// Hiding amounts is a per-device choice, so it lives in localStorage only
+const HIDE_KEY = 'hide-amounts'
+
+function readHidden() {
+  try { return localStorage.getItem(HIDE_KEY) === '1' } catch { return false }
+}
 
 // Loads from Supabase and keeps a copy on the device, so the app still
 // opens without a connection. Returns null when neither is available.
@@ -48,11 +60,15 @@ export default function App({ userId }) {
   const { theme, toggle: toggleTheme } = useTheme()
   const today = getTodayKey()
   const currentMonth = getMonthKey(today)
+  const [startDay, setStartDay] = useState(null)
   const [month, setMonth] = useState(currentMonth)
+  const [tab, setTab] = useState('add')
+  const [hidden, setHidden] = useState(readHidden)
   const [categories, setCategories] = useState([])
   const [budgets, setBudgets] = useState([])
   const [rules, setRules] = useState([])
   const [history, setHistory] = useState([])
+  const [usage, setUsage] = useState([])
   const [expenses, setExpenses] = useState([])
   const [incomes, setIncomes] = useState([])
   const [loaded, setLoaded] = useState(false)
@@ -62,7 +78,6 @@ export default function App({ userId }) {
   const [online, setOnline] = useState(navigator.onLine)
   const [pending, setPending] = useState(() => readQueue(userId).length)
   const [form, setForm] = useState(null)
-  const [view, setView] = useState('main')
   const [toast, setToast] = useState(null)
   const toastId = useRef(0)
 
@@ -112,16 +127,24 @@ export default function App({ userId }) {
         if (seedError) console.error('seed categories error:', seedError)
         cats = await loadList(userId, 'categories', categoriesQuery())
       }
-      const [budgetRows, ruleRows, recent] = await Promise.all([
+      const [budgetRows, ruleRows, recent, settings] = await Promise.all([
         loadList(userId, 'budgets', supabase.from('budgets').select('*').eq('user_id', userId)),
         loadList(userId, 'recurring', supabase.from('recurring_expenses').select('*').eq('user_id', userId).order('day_of_month')),
         loadList(userId, 'history', supabase.from('expenses').select('note, category_id, created_at')
-          .eq('user_id', userId).not('note', 'is', null).order('created_at', { ascending: false }).limit(300)),
+          .eq('user_id', userId).order('created_at', { ascending: false }).limit(300)),
+        // No row yet means the period starts on the 1st
+        loadList(userId, 'settings', supabase.from('user_settings').select('period_start_day')
+          .eq('user_id', userId).maybeSingle()),
       ])
+      const day = settings?.period_start_day || 1
+      setStartDay(day)
+      setMonth(periodKeyFor(today, day))
       setCategories(cats || [])
       setBudgets(budgetRows || [])
       setRules(ruleRows || [])
       setHistory(recent || [])
+      // Favorites are worked out once, so the tiles do not move while typing
+      setUsage(recent || [])
       setLoaded(true)
       if (ruleRows && navigator.onLine) {
         const added = await addDueRecurring(ruleRows)
@@ -137,14 +160,15 @@ export default function App({ userId }) {
   }, [userId])
 
   useEffect(() => {
+    if (startDay === null) return
     let cancelled = false
     async function load() {
-      const { start, end } = monthRange(month)
-      const inMonth = r => getMonthKey(r.date) === month
+      const { start, end } = periodRange(month, startDay)
+      const inMonth = r => periodKeyFor(r.date, startDay) === month
       const [exp, inc] = await Promise.all([
-        loadList(userId, `expenses:${month}`, supabase.from('expenses').select('*')
+        loadList(userId, `expenses:${month}@${startDay}`, supabase.from('expenses').select('*')
           .eq('user_id', userId).gte('date', start).lt('date', end)),
-        loadList(userId, `incomes:${month}`, supabase.from('incomes').select('*')
+        loadList(userId, `incomes:${month}@${startDay}`, supabase.from('incomes').select('*')
           .eq('user_id', userId).gte('date', start).lt('date', end)),
       ])
       if (cancelled) return
@@ -156,7 +180,7 @@ export default function App({ userId }) {
     }
     load()
     return () => { cancelled = true }
-  }, [userId, month, refresh])
+  }, [userId, month, startDay, refresh])
 
   useEffect(() => {
     async function goOnline() {
@@ -191,28 +215,47 @@ export default function App({ userId }) {
     return res
   }
 
+  const inPeriod = date => periodKeyFor(date, startDay) === month
+
+  // New entries come from the Add screen, which stays open for the next one
+  async function addEntry({ kind, ...fields }) {
+    const income = kind === 'income'
+    const table = income ? 'incomes' : 'expenses'
+    const row = { id: crypto.randomUUID(), user_id: userId, created_at: new Date().toISOString(), ...fields }
+    const res = await save({ table, type: 'insert', row }, `Couldn't add this ${income ? 'income' : 'expense'}. Try again.`)
+    if (!res) return false
+    if (inPeriod(row.date)) (income ? setIncomes : setExpenses)(list => [...list, row])
+    if (!income) setHistory(h => [row, ...h])
+    const cat = categories.find(c => c.id === row.category_id)
+    const what = income ? 'income' : cat ? `${cat.emoji ? cat.emoji + ' ' : ''}${cat.name}` : 'expense'
+    showToast(`${res.queued ? 'Saved offline' : 'Saved'}: ${formatIDR(row.amount)} ${what}`, 'success', {
+      duration: UNDO_MS, action: { label: 'Undo', onClick: () => undoAdd(table, row) }
+    })
+    return true
+  }
+
+  async function undoAdd(table, row) {
+    setToast(null)
+    const res = await save({ table, type: 'delete', id: row.id }, "Couldn't undo. Delete it from Activity.")
+    if (!res) return
+    ;(table === 'incomes' ? setIncomes : setExpenses)(list => list.filter(e => e.id !== row.id))
+    setHistory(h => h.filter(e => e.id !== row.id))
+  }
+
+  // Editing an entry from Activity
   async function saveEntry({ kind, ...fields }) {
     const income = kind === 'income'
     const table = income ? 'incomes' : 'expenses'
     const setList = income ? setIncomes : setExpenses
-    const editing = form.entry && toRow(form.entry)
-    const inMonth = getMonthKey(fields.date) === month
-    let res
-    if (editing) {
-      res = await save({ table, type: 'update', id: editing.id, fields }, "Couldn't save. Try again.")
-      if (!res) return false
-      const updated = { ...editing, ...fields }
-      setList(list => inMonth ? list.map(e => e.id === editing.id ? updated : e) : list.filter(e => e.id !== editing.id))
-    } else {
-      const row = { id: crypto.randomUUID(), user_id: userId, created_at: new Date().toISOString(), ...fields }
-      res = await save({ table, type: 'insert', row }, `Couldn't add this ${income ? 'income' : 'expense'}. Try again.`)
-      if (!res) return false
-      if (inMonth) setList(list => [...list, row])
-      if (!income && row.note) setHistory(h => [row, ...h])
-    }
+    const editing = toRow(form.entry)
+    const stays = inPeriod(fields.date)
+    const res = await save({ table, type: 'update', id: editing.id, fields }, "Couldn't save. Try again.")
+    if (!res) return false
+    const updated = { ...editing, ...fields }
+    setList(list => stays ? list.map(e => e.id === editing.id ? updated : e) : list.filter(e => e.id !== editing.id))
     setForm(null)
     if (res.queued) showToast("Saved offline. It syncs when you're back online.")
-    else if (!inMonth) showToast(`Saved to ${monthLabel(getMonthKey(fields.date))}`)
+    else if (!stays) showToast(`Saved to ${monthLabel(periodKeyFor(fields.date, startDay))}`)
     return true
   }
 
@@ -233,10 +276,10 @@ export default function App({ userId }) {
     setToast(null)
     const res = await save({ table, type: 'insert', row }, "Couldn't bring it back. Add it again by hand.")
     if (!res) return
-    if (getMonthKey(row.date) === month) (table === 'incomes' ? setIncomes : setExpenses)(list => [...list, row])
+    if (inPeriod(row.date)) (table === 'incomes' ? setIncomes : setExpenses)(list => [...list, row])
   }
 
-  // Categories, budgets and recurring expenses need a connection
+  // Categories, budgets, recurring expenses and settings need a connection
 
   function requireOnline() {
     if (navigator.onLine) return true
@@ -245,9 +288,9 @@ export default function App({ userId }) {
   }
 
   // Returns the new category id, or null when it failed
-  async function createCategory(name, color) {
+  async function createCategory(name, color, emoji = null) {
     if (!requireOnline()) return null
-    const cat = { id: crypto.randomUUID(), name, color, user_id: userId, created_at: new Date().toISOString() }
+    const cat = { id: crypto.randomUUID(), name, color, emoji, user_id: userId, created_at: new Date().toISOString() }
     const { error } = await supabase.from('expense_categories').insert(cat)
     if (error) {
       console.error('category insert error:', error)
@@ -334,13 +377,29 @@ export default function App({ userId }) {
     return true
   }
 
+  async function saveStartDay(day) {
+    if (!requireOnline()) return
+    const { error } = await supabase.from('user_settings')
+      .upsert({ user_id: userId, period_start_day: day, updated_at: new Date().toISOString() })
+    if (error) { console.error('settings save error:', error); showToast("Couldn't save the setting. Try again.", 'error'); return }
+    writeCache(userId, 'settings', { period_start_day: day })
+    setStartDay(day)
+    setMonth(periodKeyFor(today, day))
+  }
+
+  function toggleHidden() {
+    const next = !hidden
+    setHidden(next)
+    try { localStorage.setItem(HIDE_KEY, next ? '1' : '0') } catch { /* storage blocked */ }
+  }
+
   function exportCSV() {
     const items = [...expenses, ...incomes.map(i => ({ ...i, kind: 'income' }))]
     const blob = new Blob([toCSV(items, categories)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `expenses-${month}.csv`
+    a.download = `expenses-${month}${startDay > 1 ? `-from-${startDay}` : ''}.csv`
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -351,31 +410,21 @@ export default function App({ userId }) {
     await supabase.auth.signOut()
   }
 
+  function changeTab(t) {
+    setTab(t)
+    window.scrollTo(0, 0)
+  }
+
+  setAmountsHidden(hidden)
+
   if (!loaded) return (
-    <div className="loading serif">
+    <div className="loading display">
       <div className="loading-mark">Rp</div>
       <div className="loading-text">Loading</div>
     </div>
   )
 
-  if (view === 'summary') return (
-    <SummaryView userId={userId} categories={categories}
-      onBack={() => setView('main')}
-      onOpenMonth={m => { setMonth(m); setView('main'); window.scrollTo(0, 0) }} />
-  )
-
-  if (view === 'manage') return (
-    <>
-      <ManageView categories={categories} budgets={budgets} rules={rules}
-        theme={theme} onToggleTheme={toggleTheme} onBack={() => setView('main')}
-        onCreateCategory={createCategory} onUpdateCategory={updateCategory} onDeleteCategory={deleteCategory}
-        onSaveBudget={saveBudget} onSaveRule={saveRule} onDeleteRule={deleteRule} />
-      {toast && <Toast key={toast.key} message={toast.message} type={toast.type}
-        action={toast.action} duration={toast.duration} onDone={hideToast} />}
-    </>
-  )
-
-  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const currentPeriod = periodKeyFor(today, startDay)
   const incomeItems = incomes.map(i => ({ ...i, kind: 'income' }))
   const allItems = [...expenses, ...incomeItems]
   const filtering = !!(filter.categoryId || filter.query.trim())
@@ -383,24 +432,35 @@ export default function App({ userId }) {
   const shownSpent = shown.filter(e => e.kind !== 'income').reduce((sum, e) => sum + e.amount, 0)
   const budgetRows = budgetStatus(expenses, budgets, categories)
   const suggestions = noteSuggestions(history)
+  const navigable = tab === 'activity' || tab === 'budget'
 
   return (
-    <div className="page dotted">
+    <div className="page">
       <div className="container">
+        <header className="app-header">
+          <div className="app-header-main">
+            <h1 className="display">{TITLES[tab]}</h1>
+            {tab === 'add' && <p className="period-label">{periodLabel(currentPeriod, startDay)}</p>}
+          </div>
+          <button className="icon-btn eye-btn" onClick={toggleHidden} aria-pressed={hidden}
+            aria-label="Hide amounts" title={hidden ? 'Show amounts' : 'Hide amounts'}>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+              <circle cx="12" cy="12" r="3" />
+              {hidden && <path d="M4 4l16 16" />}
+            </svg>
+          </button>
+        </header>
 
-        {/* Header */}
-        <div className="header fade-up">
-          <div>
-            <p className="header-date">{dateStr}</p>
-            <h1 className="serif">My Expenses</h1>
+        {navigable && (
+          <div className="period-nav">
+            <button className="icon-btn" onClick={() => setMonth(m => shiftMonth(m, -1))} aria-label="Previous period">&#8249;</button>
+            <span className="period-label" aria-live="polite">{periodLabel(month, startDay)}</span>
+            <button className="icon-btn" onClick={() => setMonth(m => shiftMonth(m, 1))}
+              disabled={month >= currentPeriod} aria-label="Next period">&#8250;</button>
           </div>
-          <div className="header-actions">
-            <button className="btn-outline" onClick={() => setView('summary')}>Summary</button>
-            <button className="btn-outline btn-theme" onClick={() => setView('manage')} title="Settings" aria-label="Settings">
-              &#9881;
-            </button>
-          </div>
-        </div>
+        )}
 
         {(!online || pending > 0) && (
           <div className={`sync-banner${online ? ' syncing' : ''}`} role="status">
@@ -412,61 +472,110 @@ export default function App({ userId }) {
           </div>
         )}
 
-        <Summary month={month} isCurrentMonth={month >= currentMonth}
-          expenses={expenses} incomeTotal={incomes.reduce((sum, i) => sum + i.amount, 0)} categories={categories}
-          selectedCategory={filter.categoryId}
-          onSelectCategory={id => setFilter(f => ({ ...f, categoryId: id }))}
-          onPrev={() => setMonth(m => shiftMonth(m, -1))}
-          onNext={() => setMonth(m => shiftMonth(m, 1))} />
+        <main>
+          {tab === 'add' && (
+            <AddScreen categories={categories} favorites={favoriteCategories(categories, usage)}
+              suggestions={suggestions} onSave={addEntry} />
+          )}
 
-        {budgetRows.length > 0 && <BudgetCard rows={budgetRows} onManage={() => setView('manage')} />}
+          {tab === 'activity' && <>
+            <Summary expenses={expenses} incomeTotal={incomes.reduce((sum, i) => sum + i.amount, 0)} categories={categories}
+              selectedCategory={filter.categoryId}
+              onSelectCategory={id => setFilter(f => ({ ...f, categoryId: id }))} />
 
-        {(allItems.length > 0 || filtering) && (
-          <div className="filters">
-            <div className="search">
-              <input className="input" type="search" placeholder="Search notes or categories" aria-label="Search"
-                value={filter.query} onChange={e => setFilter(f => ({ ...f, query: e.target.value }))} />
-            </div>
-            <CategoryChips categories={categories} selectedId={filter.categoryId} emptyLabel="All"
-              onChange={id => setFilter(f => ({ ...f, categoryId: id }))} />
-            {filtering && (
-              <div className="filter-result">
-                <span>{shown.length} {shown.length === 1 ? 'match' : 'matches'}{shownSpent ? `, ${formatIDR(shownSpent)} spent` : ''}</span>
-                <button className="link-btn" onClick={() => setFilter({ categoryId: null, query: '' })}>Clear</button>
+            {(allItems.length > 0 || filtering) && (
+              <div className="filters">
+                <input className="input" type="search" placeholder="Search notes or categories" aria-label="Search"
+                  value={filter.query} onChange={e => setFilter(f => ({ ...f, query: e.target.value }))} />
+                <CategoryChips categories={categories} selectedId={filter.categoryId} emptyLabel="All"
+                  onChange={id => setFilter(f => ({ ...f, categoryId: id }))} />
+                {filtering && (
+                  <div className="filter-result">
+                    <span>{shown.length} {shown.length === 1 ? 'match' : 'matches'}{shownSpent ? `, ${formatIDR(shownSpent)} spent` : ''}</span>
+                    <button className="link-btn" onClick={() => setFilter({ categoryId: null, query: '' })}>Clear</button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {loadedMonth === month && allItems.length === 0 && (
-          <div className="empty">
-            {month === currentMonth
-              ? 'Nothing here yet this month. Tap + to add your first expense.'
-              : `No expenses in ${monthLabel(month)}.`}
-          </div>
-        )}
+            {loadedMonth === month && allItems.length === 0 && (
+              <div className="empty">
+                {month === currentPeriod
+                  ? <>Nothing here yet this period. <button className="link-btn" onClick={() => changeTab('add')}>Add an expense</button></>
+                  : `No expenses in ${monthLabel(month)}.`}
+              </div>
+            )}
 
-        {filtering && allItems.length > 0 && shown.length === 0 && (
-          <div className="empty">Nothing matches this search. Try another word or clear the filter.</div>
-        )}
+            {filtering && allItems.length > 0 && shown.length === 0 && (
+              <div className="empty">Nothing matches this search. Try another word or clear the filter.</div>
+            )}
 
-        <ExpenseList items={shown} categories={categories} today={today}
-          onEdit={entry => setForm({ entry })} />
+            <ExpenseList items={shown} categories={categories} today={today}
+              onEdit={entry => setForm({ entry })} />
+          </>}
 
-        <div className="footer serif">every rupiah counts</div>
-        {allItems.length > 0 && (
-          <button className="signout-btn" onClick={exportCSV}>Export {monthLabel(month)} as CSV</button>
-        )}
-        <button className="signout-btn" onClick={signOut}>Sign out</button>
+          {tab === 'budget' && <>
+            {budgetRows.length > 0 && <BudgetCard rows={budgetRows} />}
+            <h2 className="section-title display">Budgets</h2>
+            <BudgetsPanel categories={categories} budgets={budgets} onSaveBudget={saveBudget} />
+            <h2 className="section-title display">Recurring</h2>
+            <RecurringPanel categories={categories} rules={rules} onCreateCategory={createCategory}
+              onSaveRule={saveRule} onDeleteRule={deleteRule} />
+          </>}
+
+          {tab === 'insight' && (
+            <SummaryView userId={userId} categories={categories} startDay={startDay}
+              onOpenMonth={m => { setMonth(m); changeTab('activity') }} />
+          )}
+
+          {tab === 'more' && <>
+            <h2 className="section-title display">Settings</h2>
+            <div className="card manage-list">
+              <div className="manage-row setting-row">
+                <label className="manage-row-main" htmlFor="start-day">
+                  <span className="manage-row-name">Month starts on day</span>
+                  <span className="manage-row-sub">Your payday. Totals, budgets and exports follow it.</span>
+                </label>
+                <select id="start-day" className="input select" value={startDay}
+                  onChange={e => saveStartDay(Number(e.target.value))}>
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="manage-row setting-row">
+                <span className="manage-row-main" id="dark-label">
+                  <span className="manage-row-name">Dark mode</span>
+                </span>
+                <button className="switch" role="switch" aria-checked={theme === 'dark'} aria-labelledby="dark-label"
+                  onClick={toggleTheme}><span /></button>
+              </div>
+            </div>
+
+            <h2 className="section-title display">Data</h2>
+            <div className="more-actions">
+              <button className="btn-outline" onClick={exportCSV} disabled={allItems.length === 0}>
+                Export {periodLabel(month, startDay)} as CSV
+              </button>
+            </div>
+
+            <h2 className="section-title display">Categories</h2>
+            <p className="manage-hint">Tap a category to change its name, emoji or color.</p>
+            <CategoriesPanel categories={categories} onCreate={createCategory}
+              onUpdate={updateCategory} onDelete={deleteCategory} />
+
+            <div className="more-actions signout">
+              <button className="btn-outline" onClick={signOut}>Sign out</button>
+            </div>
+          </>}
+        </main>
       </div>
 
-      <button className="fab" onClick={() => setForm({})} aria-label="Add expense or income">+</button>
+      <TabBar tab={tab} onChange={changeTab} />
 
       {form && (
         <ExpenseForm
           entry={form.entry}
           categories={categories}
-          defaultCategoryId={filter.categoryId || categories[0]?.id || null}
+          defaultCategoryId={null}
           suggestions={suggestions}
           onSave={saveEntry}
           onDelete={deleteEntry}

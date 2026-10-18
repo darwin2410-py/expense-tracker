@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { formatIDR, parseAmount, shiftMonth, monthRange, monthLabel, dayLabel, groupByDay, totalsByCategory, monthsBack, monthlyStats,
-  filterExpenses, budgetStatus, recurringDate, dueRecurring, ordinal, noteSuggestions, toCSV, applyPending } from './utils'
+  filterExpenses, budgetStatus, recurringDate, dueRecurring, ordinal, noteSuggestions, toCSV, applyPending,
+  periodKeyFor, periodRange, periodLabel, dateChipLabel, numpadPress, favoriteCategories, setAmountsHidden } from './utils'
 
 describe('formatIDR', () => {
   it('uses dots as thousand separators', () => {
@@ -240,5 +241,105 @@ describe('applyPending', () => {
       { table: 'expenses', type: 'insert', row: { id: 'b', date: '2026-10-02', amount: 2 } },
     ], 'expenses', inOct)
     expect(list.map(r => r.id)).toEqual(['b'])
+  })
+})
+
+describe('budget periods', () => {
+  it('puts a date in the period of the month it started in', () => {
+    expect(periodKeyFor('2026-10-03', 25)).toBe('2026-09')
+    expect(periodKeyFor('2026-10-24', 25)).toBe('2026-09')
+    expect(periodKeyFor('2026-10-25', 25)).toBe('2026-10')
+    expect(periodKeyFor('2026-10-01', 1)).toBe('2026-10')
+  })
+
+  it('crosses the year', () => {
+    expect(periodKeyFor('2027-01-10', 25)).toBe('2026-12')
+    expect(periodRange('2026-12', 25)).toEqual({ start: '2026-12-25', end: '2027-01-25' })
+    expect(periodLabel('2026-12', 25)).toBe('December 2026 · 25 Dec – 24 Jan')
+  })
+
+  it('handles February', () => {
+    expect(periodLabel('2026-02', 1)).toBe('February 2026 · 1 Feb – 28 Feb')
+    expect(periodLabel('2028-02', 1)).toBe('February 2028 · 1 Feb – 29 Feb')
+    expect(periodLabel('2026-01', 28)).toBe('January 2026 · 28 Jan – 27 Feb')
+    expect(periodLabel('2026-02', 28)).toBe('February 2026 · 28 Feb – 27 Mar')
+    expect(periodKeyFor('2026-03-01', 28)).toBe('2026-02')
+  })
+
+  it('labels a payday period', () => {
+    expect(periodLabel('2026-09', 25)).toBe('September 2026 · 25 Sep – 24 Oct')
+    expect(periodRange('2026-09', 25)).toEqual({ start: '2026-09-25', end: '2026-10-25' })
+    expect(periodRange('2026-09')).toEqual(monthRange('2026-09'))
+  })
+
+  it('groups monthly stats by period', () => {
+    const expenses = [
+      { amount: 100, date: '2026-09-24' },
+      { amount: 200, date: '2026-09-25' },
+      { amount: 300, date: '2026-10-24' },
+      { amount: 400, date: '2026-10-25' },
+    ]
+    const [aug, sep] = monthlyStats(expenses, ['2026-08', '2026-09'], [], '2026-10-30', [], 25)
+    expect(aug.total).toBe(100)
+    expect(sep.total).toBe(500)
+    expect(sep.avgPerDay).toBe(Math.round(500 / 30))
+  })
+})
+
+describe('dateChipLabel', () => {
+  it('names today and yesterday', () => {
+    expect(dateChipLabel('2026-10-08', '2026-10-08')).toBe('Today · Thu 8 Oct')
+    expect(dateChipLabel('2026-10-07', '2026-10-08')).toBe('Yesterday · Wed 7 Oct')
+    expect(dateChipLabel('2026-10-06', '2026-10-08')).toBe('Tue 6 Oct')
+  })
+})
+
+describe('numpadPress', () => {
+  const type = keys => keys.reduce(numpadPress, 0)
+
+  it('adds digits and removes the last one', () => {
+    expect(type(['2', '5'])).toBe(25)
+    expect(type(['2', '5', 'back'])).toBe(2)
+    expect(type(['back'])).toBe(0)
+    expect(type(['0', '0'])).toBe(0)
+  })
+
+  it('adds zeros with 00 and 000', () => {
+    expect(type(['5', '00'])).toBe(500)
+    expect(type(['2', '5', '000'])).toBe(25000)
+    expect(type(['000'])).toBe(0)
+  })
+
+  it('multiplies by a million with jt', () => {
+    expect(type(['2', 'jt'])).toBe(2000000)
+    expect(type(['1', '5', 'jt'])).toBe(15000000)
+    expect(type(['jt'])).toBe(0)
+  })
+
+  it('ignores presses past the limit', () => {
+    expect(type(['9', '9', '9', 'jt', 'jt'])).toBe(999000000)
+    expect(type(['9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9'])).toBe(999999999999)
+  })
+})
+
+describe('favoriteCategories', () => {
+  const cats = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(id => ({ id }))
+
+  it('puts the most used first and keeps the order for ties', () => {
+    const used = ['c', 'c', 'c', 'e', 'e', 'a', 'x', null].map(category_id => ({ category_id }))
+    expect(favoriteCategories(cats, used).map(c => c.id)).toEqual(['c', 'e', 'a', 'b', 'd'])
+  })
+
+  it('falls back to category order with no history', () => {
+    expect(favoriteCategories(cats, [], 4).map(c => c.id)).toEqual(['a', 'b', 'c', 'd'])
+  })
+})
+
+describe('hidden amounts', () => {
+  it('masks formatIDR', () => {
+    setAmountsHidden(true)
+    expect(formatIDR(25000)).toBe('Rp •••••')
+    setAmountsHidden(false)
+    expect(formatIDR(25000)).toBe('Rp 25.000')
   })
 })

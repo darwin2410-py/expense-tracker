@@ -1,22 +1,19 @@
-import { formatIDR, formatNumber, monthLabel, totalsByCategory } from '../utils'
+import { useState } from 'react'
+import { formatIDR, totalsByCategory } from '../utils'
 import CategoryBreakdown from './CategoryBreakdown'
 
-export default function Summary({ month, isCurrentMonth, expenses, incomeTotal, categories,
-  selectedCategory, onSelectCategory, onPrev, onNext }) {
+export default function Summary({ expenses, incomeTotal, categories, selectedCategory, onSelectCategory }) {
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
   const rows = totalsByCategory(expenses, categories)
   const balance = incomeTotal - total
+  const [showAll, setShowAll] = useState(false)
+  // Top three keep the list close to the top; the selected one always shows
+  const shown = showAll ? rows : rows.filter((r, i) => i < 3 || r.id === selectedCategory)
 
   return (
-    <div className="card summary fade-up" style={{ animationDelay: '0.05s' }}>
-      <div className="month-nav">
-        <button className="month-btn" onClick={onPrev} aria-label="Previous month">&#8249;</button>
-        <span>{monthLabel(month)}</span>
-        <button className="month-btn" onClick={onNext} disabled={isCurrentMonth} aria-label="Next month">&#8250;</button>
-      </div>
-
+    <div className="card summary">
       <div className="summary-label">Total spent</div>
-      <div className="summary-total serif"><small>Rp</small>{formatNumber(total)}</div>
+      <div className="summary-total display"><span className="highlight">{formatIDR(total)}</span></div>
       <div className="summary-count">
         {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'}
       </div>
@@ -31,7 +28,12 @@ export default function Summary({ month, isCurrentMonth, expenses, incomeTotal, 
       )}
 
       {rows.length > 0 && (
-        <CategoryBreakdown rows={rows} total={total} selectedId={selectedCategory} onSelect={onSelectCategory} />
+        <CategoryBreakdown rows={shown} total={total} selectedId={selectedCategory} onSelect={onSelectCategory} />
+      )}
+      {rows.length > 3 && (
+        <button className="link-btn" aria-expanded={showAll} onClick={() => setShowAll(s => !s)}>
+          {showAll ? 'Show less' : `Show all ${rows.length} categories`}
+        </button>
       )}
     </div>
   )

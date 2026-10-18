@@ -13,7 +13,7 @@ export default function Root() {
   }, [])
 
   if (session === undefined) return (
-    <div className="loading serif">
+    <div className="loading display">
       <div className="loading-mark">Rp</div>
       <div className="loading-text">Loading</div>
     </div>

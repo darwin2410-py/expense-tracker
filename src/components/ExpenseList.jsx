@@ -13,7 +13,7 @@ export default function ExpenseList({ items, categories, today, onEdit }) {
         {group.items.map(e => {
           if (e.kind === 'income') return (
             <button key={e.id} className="expense income" onClick={() => onEdit(e)}>
-              <span className="chip-dot" />
+              <span className="cat-badge income-badge" aria-hidden="true">💰</span>
               <span className="expense-main">
                 <span className="expense-cat">Income</span>
                 {e.note && <span className="expense-note">{e.note}</span>}
@@ -24,7 +24,7 @@ export default function ExpenseList({ items, categories, today, onEdit }) {
           const cat = byId.get(e.category_id)
           return (
             <button key={e.id} className="expense" onClick={() => onEdit(e)}>
-              <span className={`chip-dot${cat ? '' : ' none'}`} style={cat ? { '--chip-color': cat.color } : undefined} />
+              <span className="cat-badge" style={cat ? { '--chip-color': cat.color } : undefined} aria-hidden="true">{cat?.emoji || '•'}</span>
               <span className="expense-main">
                 <span className="expense-cat">
                   {cat?.name || 'Uncategorized'}

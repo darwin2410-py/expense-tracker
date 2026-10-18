@@ -1,11 +1,10 @@
 import { formatIDR } from '../utils'
 
-export default function BudgetCard({ rows, onManage }) {
+export default function BudgetCard({ rows }) {
   return (
     <div className="card budgets">
       <div className="budgets-head">
-        <span className="summary-label">Budgets</span>
-        <button className="link-btn" onClick={onManage}>Edit</button>
+        <span className="summary-label">This period</span>
       </div>
       <ul className="budget-list">
         {rows.map(r => {
@@ -13,7 +12,7 @@ export default function BudgetCard({ rows, onManage }) {
           return (
             <li key={r.id} className={`budget ${state}`}>
               <div className="budget-head">
-                {r.color && <span className="chip-dot" style={{ '--chip-color': r.color }} />}
+                <span className="cat-badge small" style={r.color ? { '--chip-color': r.color } : undefined} aria-hidden="true">{r.emoji || '∑'}</span>
                 <span className="budget-name">{r.name}</span>
                 <span className="budget-amount">{formatIDR(r.spent)} <small>/ {formatIDR(r.budget)}</small></span>
               </div>
