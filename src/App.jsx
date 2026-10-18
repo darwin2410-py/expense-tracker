@@ -6,6 +6,7 @@ import Toast from './components/Toast'
 import Summary from './components/Summary'
 import ExpenseList from './components/ExpenseList'
 import ExpenseForm from './components/ExpenseForm'
+import SummaryView from './components/SummaryView'
 
 const UNDO_MS = 5000
 
@@ -29,6 +30,7 @@ export default function App({ userId }) {
   const [loaded, setLoaded] = useState(false)
   const [loadedMonth, setLoadedMonth] = useState(null)
   const [form, setForm] = useState(null)
+  const [view, setView] = useState('main')
   const [toast, setToast] = useState(null)
   const toastId = useRef(0)
 
@@ -136,6 +138,12 @@ export default function App({ userId }) {
     </div>
   )
 
+  if (view === 'summary') return (
+    <SummaryView userId={userId} categories={categories}
+      onBack={() => setView('main')}
+      onOpenMonth={m => { setMonth(m); setView('main'); window.scrollTo(0, 0) }} />
+  )
+
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
@@ -149,6 +157,7 @@ export default function App({ userId }) {
             <h1 className="serif">My Expenses</h1>
           </div>
           <div className="header-actions">
+            <button className="btn-outline" onClick={() => setView('summary')}>Summary</button>
             <button className="btn-outline btn-theme" onClick={toggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
               {theme === 'dark' ? '☀' : '☽'}
             </button>

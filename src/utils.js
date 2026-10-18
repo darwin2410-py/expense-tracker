@@ -88,3 +88,43 @@ export function totalsByCategory(expenses, categories) {
   }
   return [...totals.values()].sort((a, b) => b.total - a.total)
 }
+
+export function shortMonthLabel(monthKey) {
+  return SHORT_MONTHS[Number(monthKey.slice(5, 7)) - 1]
+}
+
+function daysInMonth(monthKey) {
+  const [y, m] = monthKey.split('-').map(Number)
+  return new Date(y, m, 0).getDate()
+}
+
+// The last `count` months ending at `lastMonth`, oldest first
+export function monthsBack(lastMonth, count) {
+  return Array.from({ length: count }, (_, i) => shiftMonth(lastMonth, i - count + 1))
+}
+
+// Per month: total, count, average per day, biggest category and the change
+// against the month before. The current month averages over the days so far.
+export function monthlyStats(expenses, months, categories, todayKey) {
+  const byMonth = new Map()
+  for (const e of expenses) {
+    const key = getMonthKey(e.date)
+    if (!byMonth.has(key)) byMonth.set(key, [])
+    byMonth.get(key).push(e)
+  }
+  const currentMonth = getMonthKey(todayKey)
+  return months.map(month => {
+    const list = byMonth.get(month) || []
+    const total = list.reduce((sum, e) => sum + e.amount, 0)
+    const prevTotal = (byMonth.get(shiftMonth(month, -1)) || []).reduce((sum, e) => sum + e.amount, 0)
+    const days = month === currentMonth ? Number(todayKey.slice(8, 10)) : daysInMonth(month)
+    return {
+      month,
+      total,
+      count: list.length,
+      avgPerDay: Math.round(total / days),
+      top: totalsByCategory(list, categories)[0] || null,
+      change: prevTotal ? Math.round((total - prevTotal) / prevTotal * 100) : null,
+    }
+  })
+}

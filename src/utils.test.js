@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatIDR, parseAmount, shiftMonth, monthRange, monthLabel, dayLabel, groupByDay, totalsByCategory } from './utils'
+import { formatIDR, parseAmount, shiftMonth, monthRange, monthLabel, dayLabel, groupByDay, totalsByCategory, monthsBack, monthlyStats } from './utils'
 
 describe('formatIDR', () => {
   it('uses dots as thousand separators', () => {
@@ -71,5 +71,41 @@ describe('totalsByCategory', () => {
       ['Food', 15000],
       ['Uncategorized', 3000],
     ])
+  })
+})
+
+describe('monthsBack', () => {
+  it('lists months oldest first across a year', () => {
+    expect(monthsBack('2026-02', 4)).toEqual(['2025-11', '2025-12', '2026-01', '2026-02'])
+  })
+})
+
+describe('monthlyStats', () => {
+  const cats = [{ id: 'f', name: 'Food', color: '#000' }, { id: 'b', name: 'Bills', color: '#111' }]
+  const expenses = [
+    { date: '2026-08-05', amount: 100000, category_id: 'f' },
+    { date: '2026-09-02', amount: 60000, category_id: 'f' },
+    { date: '2026-09-20', amount: 90000, category_id: 'b' },
+    { date: '2026-10-01', amount: 30000, category_id: 'f' },
+  ]
+  const [aug, sep, oct] = monthlyStats(expenses, ['2026-08', '2026-09', '2026-10'], cats, '2026-10-10')
+
+  it('totals each month and picks the biggest category', () => {
+    expect(sep.total).toBe(150000)
+    expect(sep.count).toBe(2)
+    expect(sep.top.name).toBe('Bills')
+  })
+  it('compares with the month before', () => {
+    expect(aug.change).toBe(null)
+    expect(sep.change).toBe(50)
+    expect(oct.change).toBe(-80)
+  })
+  it('averages per day, so far for the current month', () => {
+    expect(sep.avgPerDay).toBe(5000)
+    expect(oct.avgPerDay).toBe(3000)
+  })
+  it('handles an empty month', () => {
+    const [empty] = monthlyStats([], ['2026-07'], cats, '2026-10-10')
+    expect(empty).toMatchObject({ total: 0, count: 0, avgPerDay: 0, top: null, change: null })
   })
 })

@@ -2,7 +2,7 @@
 
 Simple expense tracker built with React, Vite and Supabase. Installable as a PWA. Same setup as the habit tracker.
 
-Features: add, edit and delete expenses (amount in IDR, category, note, date), default categories plus your own, monthly total with a breakdown per category, expenses grouped by day, dark mode.
+Features: add, edit and delete expenses (amount in IDR, category, note, date), default categories plus your own, monthly total with a breakdown per category, expenses grouped by day, a summary page that compares the last 6 or 12 months, dark mode.
 
 ## Setup
 
