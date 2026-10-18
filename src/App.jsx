@@ -553,7 +553,7 @@ export default function App({ userId }) {
             <h2 className="section-title display">Data</h2>
             <div className="more-actions">
               <button className="btn-outline" onClick={exportCSV} disabled={allItems.length === 0}>
-                Export {periodLabel(month, startDay)} as CSV
+                Export {monthLabel(month)} as CSV
               </button>
             </div>
 

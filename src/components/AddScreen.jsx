@@ -77,7 +77,7 @@ export default function AddScreen({ categories, favorites, suggestions, onSave }
       </div>
 
       <output className={`add-amount display${amount >= 1e9 ? ' long' : ''}`} aria-live="polite" aria-label="Amount">
-        <span className="highlight">Rp {formatNumber(amount)}</span>
+        Rp {formatNumber(amount)}
       </output>
 
       {!income && (

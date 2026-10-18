@@ -68,7 +68,7 @@ export default function SummaryView({ userId, categories, startDay, onOpenMonth 
 
     <div className="card chart-card fade-up" style={{ animationDelay: '0.05s' }}>
       <div className="summary-label">{monthLabel(sel.month)}</div>
-      <div className="summary-total display"><span className="highlight">{formatIDR(sel.total)}</span></div>
+      <div className="summary-total display">{formatIDR(sel.total)}</div>
       <div className="summary-count">Tap a bar to see that month</div>
 
       <div className="bars">

@@ -1,5 +1,6 @@
-/* Soft neubrutalism: flat pastel fills, thick dark outlines, hard shadows
-   without blur. Pressing an element pushes it into its shadow. */
+/* Liquid glass: frosted surfaces over a soft pastel mesh gradient.
+   Only a handful of large surfaces blur what is behind them; small or
+   repeated elements (keys, chips, list rows) use a plain translucent fill. */
 
 *,
 *::before,
@@ -10,52 +11,100 @@
 }
 
 :root {
-  --bg: #FFF8EE;
-  --card: #FFFFFF;
-  --ink: #111111;
-  --ink-soft: #57514A;
-  --line: #111111;
-  --line-soft: rgba(17, 17, 17, 0.14);
-  --shadow: #111111;
-  --blue: #DCE8FF;
-  --purple: #E8E0FF;
-  --yellow: #FFE27A;
-  --mint: #CFF3E2;
-  --pink: #FFD6D6;
-  --good: #0B6B3A;
-  --bad: #B3261E;
-  --focus: #1D4ED8;
-  --overlay: rgba(17, 17, 17, 0.45);
+  --bg: #EEF1F8;
+  --blob-1: #B9D4FF;
+  --blob-2: #BDEFD9;
+  --blob-3: #FFD3BA;
+  --blob-4: #D9C8FF;
+  --ink: #1D1D24;
+  --ink-soft: #55555F;
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --fill: rgba(255, 255, 255, 0.5);
+  --fill-press: rgba(255, 255, 255, 0.85);
+  --fill-selected: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.7);
+  --line-soft: rgba(29, 29, 36, 0.08);
+  --track: rgba(29, 29, 36, 0.08);
+  --shadow: 0 8px 24px rgba(31, 38, 80, 0.08), 0 1px 2px rgba(31, 38, 80, 0.06);
+  --shadow-sm: 0 2px 8px rgba(31, 38, 80, 0.06);
+  --blur: blur(20px) saturate(160%);
+  --accent: #3B6FD4;
+  --accent-text: #2D5CC0;
+  --accent-soft: rgba(74, 127, 224, 0.24);
+  --on-accent: #FFFFFF;
+  --good: #0E6B3E;
+  --bad: #B4261E;
+  --bar-ok: #34C47C;
+  --bar-near: #F5B83D;
+  --bar-over: #E5484D;
+  --error-fill: rgba(255, 220, 220, 0.88);
+  --focus: #2D5CC0;
+  --overlay: rgba(15, 18, 34, 0.3);
 
-  --border: 2.5px solid var(--line);
-  --press: 4px;
-  --shadow-sm: 4px 4px 0 var(--shadow);
-  --shadow-lg: 6px 6px 0 var(--shadow);
-  --radius: 14px;
-  --radius-lg: 18px;
-  --font: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --tabbar-space: calc(108px + env(safe-area-inset-bottom));
+  --radius: 16px;
+  --radius-lg: 22px;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --tabbar-space: calc(104px + env(safe-area-inset-bottom));
   color-scheme: light;
 }
 
 html[data-theme="dark"] {
-  --bg: #1A1A1A;
-  --card: #2A2A2A;
-  --ink: #F5F5F5;
-  --ink-soft: #C4C4C4;
-  --line: #F5F5F5;
-  --line-soft: rgba(245, 245, 245, 0.16);
-  --shadow: #F5F5F5;
-  --blue: #2B3A5C;
-  --purple: #3B3358;
-  --yellow: #5E4F12;
-  --mint: #1F4A3A;
-  --pink: #5A2A2E;
+  --bg: #0F1222;
+  --blob-1: #26346E;
+  --blob-2: #3B2A6B;
+  --blob-3: #173F48;
+  --blob-4: #45284D;
+  --ink: #F4F4F8;
+  --ink-soft: #C2C2CE;
+  --glass: rgba(30, 30, 40, 0.5);
+  --glass-strong: rgba(30, 30, 40, 0.82);
+  --fill: rgba(42, 42, 56, 0.45);
+  --fill-press: rgba(80, 80, 100, 0.6);
+  --fill-selected: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --line-soft: rgba(255, 255, 255, 0.08);
+  --track: rgba(255, 255, 255, 0.1);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --accent-text: #A9C4FF;
+  --accent-soft: rgba(74, 127, 224, 0.3);
   --good: #7BE0A8;
-  --bad: #FF9B92;
-  --focus: #8AB4FF;
-  --overlay: rgba(0, 0, 0, 0.6);
+  --bad: #FFA8A0;
+  --error-fill: rgba(90, 42, 46, 0.88);
+  --focus: #A9C4FF;
+  --overlay: rgba(0, 0, 0, 0.5);
   color-scheme: dark;
+}
+
+/* No backdrop-filter: the glass turns almost solid so text stays readable */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass: rgba(255, 255, 255, 0.92);
+    --glass-strong: rgba(255, 255, 255, 0.96);
+    --fill: rgba(255, 255, 255, 0.85);
+  }
+
+  html[data-theme="dark"] {
+    --glass: rgba(30, 30, 40, 0.92);
+    --glass-strong: rgba(30, 30, 40, 0.96);
+    --fill: rgba(42, 42, 56, 0.9);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass: #FFFFFF;
+    --glass-strong: #FFFFFF;
+    --fill: #F4F5FA;
+    --blur: none;
+  }
+
+  html[data-theme="dark"] {
+    --glass: #1E1E28;
+    --glass-strong: #1E1E28;
+    --fill: #2A2A38;
+  }
 }
 
 html {
@@ -70,6 +119,21 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Mesh gradient: soft blobs in the corners, fixed behind everything */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 40% at 8% 6%, var(--blob-1) 0%, transparent 70%),
+    radial-gradient(50% 38% at 96% 18%, var(--blob-2) 0%, transparent 70%),
+    radial-gradient(60% 42% at 2% 96%, var(--blob-3) 0%, transparent 70%),
+    radial-gradient(55% 45% at 100% 88%, var(--blob-4) 0%, transparent 70%),
+    var(--bg);
 }
 
 button,
@@ -92,13 +156,13 @@ button:disabled {
 
 :focus-visible {
   outline: 3px solid var(--focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .display {
   font-family: var(--font);
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .visually-hidden {
@@ -110,29 +174,37 @@ button:disabled {
   white-space: nowrap;
 }
 
-.highlight {
-  background: var(--yellow);
-  border-radius: 10px;
-  padding: 0 0.22em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+/* ---------- Glass surfaces (blurred) ---------- */
+
+.card,
+.tabbar,
+.segmented,
+.numpad,
+.sheet,
+.toast,
+.icon-btn,
+.sync-banner,
+.loading-mark {
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
 }
 
-/* ---------- Pressable surfaces ---------- */
+/* ---------- Translucent controls (no blur) ---------- */
 
 .btn,
 .btn-outline,
 .chip,
-.icon-btn,
 .key,
 .fav,
-.toast-action,
-.login-btn,
-.segmented {
-  border: var(--border);
+.input,
+.login-btn {
+  background: var(--fill);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
-  background: var(--card);
 }
 
 .btn,
@@ -161,9 +233,18 @@ button.chip:active,
 .key:active:not(:disabled),
 .fav:active,
 .toast-action:active,
-.login-btn:active:not(:disabled) {
-  box-shadow: 0 0 0 var(--shadow);
-  transform: translate(var(--press), var(--press));
+.login-btn:active:not(:disabled),
+.tab:not(.active):active {
+  transform: scale(0.97);
+  background: var(--fill-press);
+}
+
+.btn.primary:active:not(:disabled),
+.login-btn:active:not(:disabled),
+.key-save:active:not(:disabled),
+.toast-action:active {
+  background: var(--accent);
+  filter: brightness(1.12);
 }
 
 .btn:disabled,
@@ -171,9 +252,8 @@ button.chip:active,
 .icon-btn:disabled,
 .key:disabled,
 .login-btn:disabled {
-  box-shadow: 0 0 0 var(--shadow);
-  transform: translate(var(--press), var(--press));
   opacity: 0.45;
+  box-shadow: none;
 }
 
 .btn,
@@ -181,7 +261,7 @@ button.chip:active,
 .login-btn {
   min-height: 48px;
   padding: 0 18px;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 15px;
   display: inline-flex;
   align-items: center;
@@ -191,11 +271,13 @@ button.chip:active,
 
 .btn.primary,
 .login-btn {
-  background: var(--yellow);
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
 }
 
 .btn.danger {
-  background: var(--pink);
+  color: var(--bad);
 }
 
 .icon-btn {
@@ -204,29 +286,28 @@ button.chip:active,
   flex: none;
   display: inline-grid;
   place-items: center;
+  border-radius: 999px;
   font-size: 24px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1;
 }
 
 .icon-btn[aria-pressed="true"] {
-  background: var(--yellow);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
 .link-btn {
   min-height: 44px;
   padding: 0 4px;
-  font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
+  font-weight: 600;
+  color: var(--accent-text);
 }
 
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 0 var(--press) var(--press) 0;
+  gap: 8px;
 }
 
 .chip {
@@ -235,36 +316,37 @@ button.chip:active,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 15px;
   white-space: nowrap;
   max-width: 100%;
+  border-radius: 999px;
 }
 
 .chip.active,
 .chip[aria-pressed="true"] {
-  background: var(--mint);
-  font-weight: 800;
-  box-shadow: 2px 2px 0 var(--shadow);
-  transform: translate(2px, 2px);
+  background: var(--fill-selected);
+  border-color: var(--accent);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .chip.dashed {
   border-style: dashed;
+  border-color: var(--ink-soft);
   box-shadow: none;
 }
 
 .chip-dot {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 2px solid var(--line);
-  background: var(--chip-color, var(--card));
+  background: var(--chip-color, var(--ink-soft));
   flex: none;
 }
 
 .chip-dot.none {
-  background: var(--card);
+  background: var(--ink-soft);
 }
 
 .cat-badge {
@@ -274,9 +356,8 @@ button.chip:active,
   display: grid;
   place-items: center;
   font-size: 20px;
-  border: var(--border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--chip-color, var(--blue)) 30%, var(--card));
+  background: color-mix(in srgb, var(--chip-color, #4A7FE0) 22%, transparent);
 }
 
 .cat-badge.small {
@@ -287,7 +368,7 @@ button.chip:active,
 }
 
 .cat-badge.income-badge {
-  background: var(--mint);
+  background: color-mix(in srgb, var(--bar-ok) 25%, transparent);
 }
 
 .input {
@@ -295,10 +376,7 @@ button.chip:active,
   min-height: 48px;
   padding: 0 14px;
   font-size: 16px;
-  font-weight: 600;
-  background: var(--card);
-  border: var(--border);
-  border-radius: var(--radius);
+  font-weight: 500;
 }
 
 .input::placeholder {
@@ -335,10 +413,7 @@ button.chip:active,
 }
 
 .card {
-  background: var(--card);
-  border: var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
 }
 
 .app-header {
@@ -354,13 +429,13 @@ button.chip:active,
 }
 
 .app-header h1 {
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.15;
 }
 
 .period-label {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
@@ -370,18 +445,17 @@ button.chip:active,
   align-items: center;
   gap: 8px;
   margin: -4px 0 18px;
-  padding: 0 var(--press) var(--press) 0;
 }
 
 .period-nav .period-label {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 600;
   text-align: center;
   min-width: 0;
 }
 
 .section-title {
-  font-size: 19px;
+  font-size: 20px;
   margin: 28px 0 12px;
 }
 
@@ -396,27 +470,18 @@ button.chip:active,
   padding: 28px 16px;
   margin: 16px 0;
   color: var(--ink-soft);
-  font-weight: 600;
-  border: 2.5px dashed var(--line);
+  font-weight: 500;
+  background: var(--fill);
+  border: 1px dashed var(--ink-soft);
   border-radius: var(--radius-lg);
 }
 
-.empty .link-btn {
-  color: var(--ink);
-}
-
 .sync-banner {
-  background: var(--pink);
-  border: var(--border);
   border-radius: var(--radius);
   padding: 10px 14px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 16px;
-}
-
-.sync-banner.syncing {
-  background: var(--blue);
 }
 
 .loading {
@@ -429,11 +494,8 @@ button.chip:active,
 
 .loading-mark {
   font-size: 34px;
-  padding: 10px 18px;
-  background: var(--yellow);
-  border: var(--border);
+  padding: 12px 20px;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
 }
 
 .loading-text {
@@ -453,12 +515,9 @@ button.chip:active,
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
+  gap: 2px;
   padding: 6px;
-  background: var(--card);
-  border: var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: 999px;
 }
 
 .tab {
@@ -468,22 +527,20 @@ button.chip:active,
   align-items: center;
   justify-content: center;
   gap: 2px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--ink-soft);
-  border: 2.5px solid transparent;
-  border-radius: 12px;
+  border-radius: 999px;
 }
 
 .tab.active {
   color: var(--ink);
-  font-weight: 800;
-  background: var(--yellow);
-  border-color: var(--line);
+  font-weight: 600;
+  background: var(--accent-soft);
 }
 
-.tab:active {
-  background: var(--blue);
+.tab.active svg {
+  color: var(--accent-text);
 }
 
 /* ---------- Add screen ---------- */
@@ -498,46 +555,42 @@ button.chip:active,
   grid-template-columns: 1fr 1fr;
   gap: 4px;
   padding: 4px;
+  border-radius: 999px;
 }
 
 .segmented button {
   min-height: 44px;
-  border-radius: 10px;
-  border: 2.5px solid transparent;
-  font-weight: 700;
+  border-radius: 999px;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
 .segmented button.active {
-  background: var(--pink);
-  border-color: var(--line);
+  background: var(--fill-selected);
   color: var(--ink);
-  font-weight: 800;
-}
-
-.segmented button.active.income {
-  background: var(--mint);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .add-amount {
   display: block;
   text-align: center;
-  font-size: 46px;
-  line-height: 1.25;
-  padding: 6px 0;
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 10px 0 6px;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
 .add-amount.long {
-  font-size: 34px;
+  font-size: 36px;
 }
 
 .fav-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  padding: 0 var(--press) var(--press) 0;
 }
 
 .fav {
@@ -548,12 +601,13 @@ button.chip:active,
   align-items: center;
   justify-content: center;
   gap: 2px;
+  border-radius: var(--radius-lg);
 }
 
 .fav.active {
-  background: var(--mint);
-  box-shadow: 2px 2px 0 var(--shadow);
-  transform: translate(2px, 2px);
+  background: var(--fill-selected);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent), var(--shadow-sm);
 }
 
 .fav-emoji {
@@ -563,7 +617,7 @@ button.chip:active,
 
 .fav-name {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -584,6 +638,11 @@ button.chip:active,
   flex: none;
 }
 
+.date-wrap .chip {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
 .date-wrap input {
   position: absolute;
   inset: 0;
@@ -595,7 +654,7 @@ button.chip:active,
 
 .date-wrap:focus-within .chip {
   outline: 3px solid var(--focus);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .note-chip {
@@ -608,37 +667,39 @@ button.chip:active,
   gap: 10px;
 }
 
+/* One blurred panel holds the keys; the keys themselves do not blur */
 .numpad {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 0 var(--press) var(--press) 0;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
 }
 
 .key {
   min-height: 64px;
   font-size: 26px;
-  font-weight: 800;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
+  box-shadow: none;
 }
 
 .key-00,
-.key-000 {
-  background: var(--blue);
-  font-size: 22px;
-}
-
+.key-000,
 .key-back,
 .key-jt {
-  background: var(--purple);
-  font-size: 22px;
+  font-size: 21px;
+  color: var(--ink-soft);
 }
 
 .key-save {
   grid-column: 4;
   grid-row: 3 / span 2;
-  background: var(--yellow);
-  font-size: 20px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+  font-size: 19px;
+  font-weight: 600;
 }
 
 /* ---------- Activity ---------- */
@@ -654,16 +715,15 @@ button.chip:active,
 
 .summary-label {
   font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
 .summary-total {
-  font-size: 34px;
-  line-height: 1.3;
-  margin: 4px 0 2px;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 2px 0;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -671,7 +731,6 @@ button.chip:active,
 .summary-count {
   font-size: 14px;
   color: var(--ink-soft);
-  font-weight: 600;
 }
 
 .income-line {
@@ -681,8 +740,12 @@ button.chip:active,
   gap: 6px 16px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 2px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
   font-size: 14px;
+}
+
+.income-line b {
+  font-weight: 600;
 }
 
 .positive b {
@@ -705,7 +768,8 @@ button.chip:active,
 }
 
 .breakdown li.selected {
-  background: var(--yellow);
+  background: var(--fill-selected);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .breakdown li > .breakdown-head,
@@ -732,7 +796,7 @@ button.chip:active,
 .breakdown-name {
   flex: 1;
   min-width: 0;
-  font-weight: 700;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -741,7 +805,6 @@ button.chip:active,
 .breakdown-count,
 .breakdown-pct {
   color: var(--ink-soft);
-  font-weight: 600;
 }
 
 .breakdown-pct {
@@ -750,23 +813,22 @@ button.chip:active,
 }
 
 .breakdown-amount {
-  font-weight: 800;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .breakdown-track {
-  height: 12px;
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--bg);
+  height: 8px;
+  border-radius: 999px;
+  background: var(--track);
   overflow: hidden;
 }
 
 .breakdown-bar,
 .budget-bar {
   height: 100%;
-  background: var(--chip-color, var(--blue));
-  border-right: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--chip-color, var(--accent));
 }
 
 .breakdown-bar.none {
@@ -784,11 +846,18 @@ button.chip:active,
   overflow-x: auto;
   scrollbar-width: none;
   margin-right: -16px;
-  padding-right: 16px;
+  padding: 2px 16px 2px 0;
 }
 
 .filters .chip-row::-webkit-scrollbar {
   display: none;
+}
+
+.filter-result .link-btn {
+  /* Sits on the bare gradient, where the accent blue is too light */
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .filter-result {
@@ -796,12 +865,8 @@ button.chip:active,
   align-items: center;
   justify-content: space-between;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink-soft);
-}
-
-.filter-result .link-btn {
-  color: var(--ink);
 }
 
 .day {
@@ -811,9 +876,9 @@ button.chip:active,
 .day-head {
   display: flex;
   justify-content: space-between;
-  padding: 0 4px 8px;
+  padding: 0 6px 8px;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--ink-soft);
 }
 
@@ -821,6 +886,14 @@ button.chip:active,
   overflow: hidden;
 }
 
+/* One card per day can add up in a long period: keep the translucent fill,
+   skip the blur */
+.card.day-list {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* List rows sit inside a glass card and add no blur of their own */
 .expense {
   width: 100%;
   min-height: 60px;
@@ -832,11 +905,11 @@ button.chip:active,
 }
 
 .expense + .expense {
-  border-top: 2px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
 }
 
 .expense:active {
-  background: var(--blue);
+  background: var(--fill-press);
 }
 
 .expense-main {
@@ -847,7 +920,7 @@ button.chip:active,
 }
 
 .expense-cat {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 15px;
 }
 
@@ -860,7 +933,7 @@ button.chip:active,
 }
 
 .expense-amount {
-  font-weight: 800;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -903,14 +976,14 @@ button.chip:active,
 .budget-name {
   flex: 1;
   min-width: 0;
-  font-weight: 800;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .budget-amount {
-  font-weight: 800;
+  font-weight: 600;
   font-size: 14px;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -919,31 +992,31 @@ button.chip:active,
 .budget-amount small {
   display: block;
   color: var(--ink-soft);
-  font-weight: 600;
+  font-weight: 400;
   font-size: 13px;
 }
 
 .budget .budget-bar {
-  background: var(--mint);
+  background: var(--bar-ok);
 }
 
 .budget.near .budget-bar {
-  background: var(--yellow);
+  background: var(--bar-near);
 }
 
 .budget.over .budget-bar {
-  background: var(--pink);
+  background: var(--bar-over);
 }
 
 .budget-left {
   font-size: 13px;
-  font-weight: 700;
   color: var(--ink-soft);
   margin-top: 6px;
 }
 
 .budget.over .budget-left {
   color: var(--bad);
+  font-weight: 600;
 }
 
 .manage-list {
@@ -961,11 +1034,11 @@ button.chip:active,
 }
 
 .manage-list > * + * {
-  border-top: 2px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
 }
 
 button.manage-row:active {
-  background: var(--blue);
+  background: var(--fill-press);
 }
 
 .manage-row-main {
@@ -976,7 +1049,7 @@ button.manage-row:active {
 }
 
 .manage-row-name {
-  font-weight: 800;
+  font-weight: 600;
   flex: 1;
   min-width: 0;
 }
@@ -992,13 +1065,12 @@ button.manage-row:active {
 
 .manage-row-side {
   font-size: 14px;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 600;
+  color: var(--accent-text);
 }
 
 .manage-row-amount {
-  font-weight: 800;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1011,11 +1083,11 @@ button.manage-row:active {
   align-items: center;
   gap: 4px;
   min-height: 44px;
-  padding: 0 10px;
-  border: var(--border);
+  padding: 0 12px;
   border-radius: 12px;
-  background: var(--bg);
-  font-weight: 700;
+  background: var(--fill);
+  border: 1px solid var(--glass-border);
+  font-weight: 500;
   width: 150px;
 }
 
@@ -1024,7 +1096,7 @@ button.manage-row:active {
   width: 100%;
   border: none;
   background: none;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 16px;
 }
 
@@ -1065,18 +1137,17 @@ button.manage-row:active {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
-  padding: 0 var(--press) var(--press) 0;
 }
 
 .swatch {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: var(--border);
+  border: 2px solid var(--glass-border);
 }
 
 .swatch.active {
-  box-shadow: 0 0 0 3px var(--card), 0 0 0 6px var(--line);
+  box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink);
 }
 
 .open-month {
@@ -1086,8 +1157,7 @@ button.manage-row:active {
 
 .more-actions {
   display: grid;
-  gap: 14px;
-  padding: 0 var(--press) var(--press) 0;
+  gap: 12px;
 }
 
 .more-actions.signout {
@@ -1108,30 +1178,31 @@ button.manage-row:active {
 
 .switch span {
   position: relative;
-  width: 54px;
+  width: 52px;
   height: 32px;
-  border: var(--border);
   border-radius: 999px;
-  background: var(--bg);
+  background: var(--track);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
 }
 
 .switch span::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 21px;
-  height: 21px;
+  top: 2px;
+  left: 2px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--ink);
+  background: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .switch[aria-checked="true"] span {
-  background: var(--mint);
+  background: var(--accent);
 }
 
 .switch[aria-checked="true"] span::after {
-  transform: translateX(22px);
+  transform: translateX(20px);
 }
 
 /* ---------- Insight ---------- */
@@ -1172,54 +1243,49 @@ button.manage-row:active {
 
 .bar {
   width: 100%;
-  max-width: 34px;
-  min-height: 6px;
-  background: var(--blue);
-  border: 2px solid var(--line);
-  border-radius: 8px 8px 4px 4px;
+  max-width: 30px;
+  min-height: 4px;
+  background: var(--accent-soft);
+  border-radius: 8px;
 }
 
 .bar-col.active .bar {
-  background: var(--yellow);
-  box-shadow: 3px 3px 0 var(--shadow);
+  background: var(--accent);
 }
 
 .bar-label {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
 .bar-col.active .bar-label {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .tiles {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin: 18px 0;
+  gap: 12px;
+  margin: 16px 0;
 }
 
 .tile {
   padding: 14px;
-  box-shadow: var(--shadow-sm);
   min-width: 0;
 }
 
 .tile-label {
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--ink-soft);
   margin-bottom: 4px;
 }
 
 .tile-value {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -1235,6 +1301,7 @@ button.manage-row:active {
 .tile-value.muted {
   color: var(--ink-soft);
   font-size: 15px;
+  font-weight: 500;
 }
 
 .tile-cat {
@@ -1246,7 +1313,6 @@ button.manage-row:active {
 .tile-sub {
   font-size: 13px;
   color: var(--ink-soft);
-  font-weight: 600;
 }
 
 .by-category {
@@ -1259,10 +1325,8 @@ button.manage-row:active {
 }
 
 .group-label {
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--ink-soft);
   margin: 28px 0 10px;
 }
@@ -1283,11 +1347,12 @@ button.manage-row:active {
 }
 
 .month-row + .month-row {
-  border-top: 2px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
 }
 
 .month-row.active {
-  background: var(--yellow);
+  background: var(--fill-selected);
+  box-shadow: inset 4px 0 0 var(--accent);
 }
 
 .month-row-main,
@@ -1303,14 +1368,13 @@ button.manage-row:active {
 
 .month-row-name,
 .month-row-total {
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .month-row-top,
 .month-row-change {
   font-size: 13px;
   color: var(--ink-soft);
-  font-weight: 600;
 }
 
 .month-row-change.up {
@@ -1344,8 +1408,7 @@ button.manage-row:active {
   display: grid;
   gap: 18px;
   padding: 22px 16px calc(22px + env(safe-area-inset-bottom));
-  background: var(--card);
-  border: var(--border);
+  background: var(--glass-strong);
   border-bottom: none;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
@@ -1361,9 +1424,7 @@ button.manage-row:active {
 .field-label {
   display: block;
   font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-weight: 600;
   color: var(--ink-soft);
   margin-bottom: 8px;
 }
@@ -1379,10 +1440,10 @@ button.manage-row:active {
   align-items: center;
   gap: 8px;
   padding: 0 14px;
-  border: var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
-  font-weight: 800;
+  background: var(--fill);
+  border: 1px solid var(--glass-border);
+  font-weight: 600;
   font-size: 22px;
 }
 
@@ -1398,7 +1459,7 @@ button.manage-row:active {
   border: none;
   background: none;
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .amount-input:focus {
@@ -1414,22 +1475,22 @@ button.manage-row:active {
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  font-weight: 700;
+  font-weight: 500;
   margin-top: 8px;
 }
 
 .check-row input {
   width: 22px;
   height: 22px;
-  accent-color: var(--ink);
+  accent-color: var(--accent);
 }
 
 /* ---------- Toast ---------- */
 
 .toast {
+  /* At the top, so it never covers the numpad or the tab bar */
   position: fixed;
   z-index: 60;
-  /* At the top, so it never covers the numpad or the tab bar */
   left: 50%;
   top: calc(10px + env(safe-area-inset-top));
   transform: translateX(-50%);
@@ -1439,26 +1500,26 @@ button.manage-row:active {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 8px 8px 16px;
+  padding: 8px 8px 8px 18px;
   min-height: 60px;
-  background: var(--mint);
-  border: var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  font-weight: 800;
+  background: var(--glass-strong);
+  border-radius: 999px;
+  font-weight: 600;
   font-size: 15px;
 }
 
 .toast.error {
-  background: var(--pink);
+  background: var(--error-fill);
 }
 
 .toast-action {
   flex: none;
   min-height: 44px;
-  padding: 0 16px;
-  font-weight: 800;
-  background: var(--yellow);
+  padding: 0 18px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 /* ---------- Login ---------- */
@@ -1476,13 +1537,12 @@ button.manage-row:active {
 
 .login-sub {
   color: var(--ink-soft);
-  font-weight: 600;
   margin-top: -8px;
 }
 
 .login-msg {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .login-msg.error {
@@ -1491,9 +1551,8 @@ button.manage-row:active {
 
 .login-switch {
   min-height: 44px;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 600;
+  color: var(--accent-text);
 }
 
 /* ---------- Motion ---------- */
@@ -1505,18 +1564,20 @@ button.manage-row:active {
   .icon-btn,
   .key,
   .fav,
+  .tab,
   .toast-action,
   .login-btn,
+  .switch span,
   .switch span::after {
-    transition: transform 60ms ease-out, box-shadow 60ms ease-out;
+    transition: transform 120ms ease-out, background-color 120ms ease-out;
   }
 
   .toast {
-    animation: toast-in 180ms ease-out;
+    animation: toast-in 220ms ease-out;
   }
 
   .sheet {
-    animation: sheet-in 200ms ease-out;
+    animation: sheet-in 240ms ease-out;
   }
 
   @keyframes toast-in {

@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'Expense Tracker',
         short_name: 'Expenses',
         description: 'Track your daily spending',
-        theme_color: '#FFF8EE',
-        background_color: '#FFF8EE',
+        theme_color: '#EEF1F8',
+        background_color: '#EEF1F8',
         display: 'standalone',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

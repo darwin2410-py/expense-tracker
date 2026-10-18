@@ -13,7 +13,7 @@ export default function Summary({ expenses, incomeTotal, categories, selectedCat
   return (
     <div className="card summary">
       <div className="summary-label">Total spent</div>
-      <div className="summary-total display"><span className="highlight">{formatIDR(total)}</span></div>
+      <div className="summary-total display">{formatIDR(total)}</div>
       <div className="summary-count">
         {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'}
       </div>
