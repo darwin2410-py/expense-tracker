@@ -43,7 +43,7 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
   if (failed) return (
     <div className="page dotted">
       <div className="container">
-        <div className="monthly-header fade-up">
+        <div className="monthly-header">
           <button className="btn-outline soft" onClick={onBack}>&#8249; Back</button>
           <h1 className="serif">Summary</h1>
         </div>
@@ -73,12 +73,12 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
   return (
     <div className="page dotted">
       <div className="container">
-        <div className="monthly-header fade-up">
+        <div className="monthly-header">
           <button className="btn-outline soft" onClick={onBack}>&#8249; Back</button>
           <h1 className="serif">Summary</h1>
         </div>
 
-        <div className="chip-row range-tabs fade-up">
+        <div className="chip-row range-tabs">
           {RANGES.map(r => (
             <Chip key={r} active={range === r} onClick={() => pickRange(r)}>{r} months</Chip>
           ))}
@@ -89,9 +89,9 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
           <div className="summary-total serif"><small>Rp</small>{formatNumber(sel.total)}</div>
           <div className="summary-count">Tap a bar to see that month</div>
 
-          <div className="bars" role="list">
+          <div className="bars">
             {stats.map(s => (
-              <button key={s.month} role="listitem"
+              <button key={s.month}
                 className={`bar-col${s.month === sel.month ? ' active' : ''}`}
                 onClick={() => setSelected(s.month)}
                 title={`${monthLabel(s.month)}: ${formatIDR(s.total)}`}
@@ -106,11 +106,11 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
           </div>
         </div>
 
-        <div className="tiles fade-up" style={{ animationDelay: '0.1s' }}>
+        <div className="tiles">
           <div className="card tile">
             <div className="tile-label">vs last month</div>
             {sel.change === null
-              ? <div className="tile-value muted">No data</div>
+              ? <div className="tile-value muted">No spending</div>
               : <div className={`tile-value${changeClass(sel.change)}`}>
                   {sel.change > 0 ? '▲' : sel.change < 0 ? '▼' : ''} {changeText(sel.change)}
                 </div>}
@@ -126,7 +126,7 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
                   <span className={`chip-dot${sel.top.color ? '' : ' none'}`} style={sel.top.color ? { '--chip-color': sel.top.color } : undefined} />
                   {sel.top.name}
                 </div>
-              : <div className="tile-value muted">None</div>}
+              : <div className="tile-value muted">No spending</div>}
             {sel.top && <div className="tile-sub">{formatIDR(sel.top.total)}</div>}
           </div>
           <div className="card tile">
@@ -139,25 +139,25 @@ export default function SummaryView({ userId, categories, onBack, onOpenMonth })
               <div className="tile-value">{formatIDR(sel.income)}</div>
             </div>
             <div className="card tile">
-              <div className="tile-label">{sel.balance < 0 ? 'Over income' : 'Left over'}</div>
+              <div className="tile-label">{sel.balance < 0 ? 'Overspent' : 'Left over'}</div>
               <div className={`tile-value${sel.balance < 0 ? ' up' : ' down'}`}>{formatIDR(Math.abs(sel.balance))}</div>
             </div>
           </>}
         </div>
 
-        <div className="card by-category fade-up" style={{ animationDelay: '0.15s' }}>
+        <div className="card by-category">
           <div className="summary-label">By category</div>
           {sel.byCategory.length
             ? <CategoryBreakdown rows={sel.byCategory} total={sel.total} showCount />
             : <p className="by-category-empty">No expenses in {monthLabel(sel.month)}.</p>}
         </div>
 
-        <button className="btn-outline open-month fade-up" onClick={() => onOpenMonth(sel.month)}>
+        <button className="btn-outline open-month" onClick={() => onOpenMonth(sel.month)}>
           See {monthLabel(sel.month)} expenses &#8250;
         </button>
 
         <div className="group-label">All months</div>
-        <div className="card month-list fade-up">
+        <div className="card month-list">
           {[...stats].reverse().map(s => (
             <button key={s.month} className={`month-row${s.month === sel.month ? ' active' : ''}`}
               onClick={() => { setSelected(s.month); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>

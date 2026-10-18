@@ -148,7 +148,7 @@ export default function App({ userId }) {
           .eq('user_id', userId).gte('date', start).lt('date', end)),
       ])
       if (cancelled) return
-      if (!exp) showToast(navigator.onLine ? 'Failed to load expenses' : `${monthLabel(month)} is not saved on this device yet`, 'error')
+      if (!exp) showToast(navigator.onLine ? "Couldn't load your expenses. Check your connection and reopen the app." : `${monthLabel(month)} is not saved on this device yet`, 'error')
       const ops = readQueue(userId)
       setExpenses(applyPending(exp || [], ops, 'expenses', inMonth))
       setIncomes(applyPending(inc || [], ops, 'incomes', inMonth))
@@ -199,19 +199,19 @@ export default function App({ userId }) {
     const inMonth = getMonthKey(fields.date) === month
     let res
     if (editing) {
-      res = await save({ table, type: 'update', id: editing.id, fields }, 'Failed to save')
+      res = await save({ table, type: 'update', id: editing.id, fields }, "Couldn't save. Try again.")
       if (!res) return false
       const updated = { ...editing, ...fields }
       setList(list => inMonth ? list.map(e => e.id === editing.id ? updated : e) : list.filter(e => e.id !== editing.id))
     } else {
       const row = { id: crypto.randomUUID(), user_id: userId, created_at: new Date().toISOString(), ...fields }
-      res = await save({ table, type: 'insert', row }, `Failed to add ${income ? 'income' : 'expense'}`)
+      res = await save({ table, type: 'insert', row }, `Couldn't add this ${income ? 'income' : 'expense'}. Try again.`)
       if (!res) return false
       if (inMonth) setList(list => [...list, row])
       if (!income && row.note) setHistory(h => [row, ...h])
     }
     setForm(null)
-    if (res.queued) showToast('Saved on this device for now')
+    if (res.queued) showToast("Saved offline. It syncs when you're back online.")
     else if (!inMonth) showToast(`Saved to ${monthLabel(getMonthKey(fields.date))}`)
     return true
   }
@@ -220,7 +220,7 @@ export default function App({ userId }) {
     const income = form.entry.kind === 'income'
     const table = income ? 'incomes' : 'expenses'
     const row = toRow(form.entry)
-    const res = await save({ table, type: 'delete', id: row.id }, 'Failed to delete')
+    const res = await save({ table, type: 'delete', id: row.id }, "Couldn't delete. Try again.")
     if (!res) return
     ;(income ? setIncomes : setExpenses)(list => list.filter(e => e.id !== row.id))
     setForm(null)
@@ -231,7 +231,7 @@ export default function App({ userId }) {
 
   async function undoDelete(table, row) {
     setToast(null)
-    const res = await save({ table, type: 'insert', row }, 'Failed to restore')
+    const res = await save({ table, type: 'insert', row }, "Couldn't bring it back. Add it again by hand.")
     if (!res) return
     if (getMonthKey(row.date) === month) (table === 'incomes' ? setIncomes : setExpenses)(list => [...list, row])
   }
@@ -251,7 +251,7 @@ export default function App({ userId }) {
     const { error } = await supabase.from('expense_categories').insert(cat)
     if (error) {
       console.error('category insert error:', error)
-      showToast(error.code === '23505' ? 'That category already exists' : 'Failed to create category', 'error')
+      showToast(error.code === '23505' ? 'You already have a category with that name' : "Couldn't add the category. Try again.", 'error')
       return null
     }
     setCategories(c => [...c, cat])
@@ -263,7 +263,7 @@ export default function App({ userId }) {
     const { error } = await supabase.from('expense_categories').update(fields).eq('id', id)
     if (error) {
       console.error('category update error:', error)
-      showToast(error.code === '23505' ? 'That category already exists' : 'Failed to save category', 'error')
+      showToast(error.code === '23505' ? 'You already have a category with that name' : "Couldn't save the category. Try again.", 'error')
       return false
     }
     setCategories(cs => cs.map(c => c.id === id ? { ...c, ...fields } : c))
@@ -274,7 +274,7 @@ export default function App({ userId }) {
   async function deleteCategory(id) {
     if (!requireOnline()) return false
     const { error } = await supabase.from('expense_categories').delete().eq('id', id)
-    if (error) { console.error('category delete error:', error); showToast('Failed to delete category', 'error'); return false }
+    if (error) { console.error('category delete error:', error); showToast("Couldn't delete the category. Try again.", 'error'); return false }
     setCategories(cs => cs.filter(c => c.id !== id))
     setBudgets(bs => bs.filter(b => b.category_id !== id))
     setRules(rs => rs.map(r => r.category_id === id ? { ...r, category_id: null } : r))
@@ -291,14 +291,14 @@ export default function App({ userId }) {
     if (!amount) {
       if (!existing) return true
       const { error } = await supabase.from('budgets').delete().eq('id', existing.id)
-      if (error) { console.error('budget delete error:', error); showToast('Failed to remove budget', 'error'); return false }
+      if (error) { console.error('budget delete error:', error); showToast("Couldn't remove the budget. Try again.", 'error'); return false }
       setBudgets(bs => bs.filter(b => b.id !== existing.id))
       return true
     }
     const { data, error } = await supabase.from('budgets')
       .upsert({ user_id: userId, category_id: categoryId, amount }, { onConflict: 'user_id,category_id' })
       .select().single()
-    if (error) { console.error('budget save error:', error); showToast('Failed to save budget', 'error'); return false }
+    if (error) { console.error('budget save error:', error); showToast("Couldn't save the budget. Try again.", 'error'); return false }
     setBudgets(bs => [...bs.filter(b => b.id !== data.id && (b.category_id ?? null) !== categoryId), data])
     return true
   }
@@ -308,18 +308,18 @@ export default function App({ userId }) {
     let saved
     if (rule) {
       const { error } = await supabase.from('recurring_expenses').update(fields).eq('id', rule.id)
-      if (error) { console.error('recurring update error:', error); showToast('Failed to save', 'error'); return false }
+      if (error) { console.error('recurring update error:', error); showToast("Couldn't save. Try again.", 'error'); return false }
       saved = { ...rule, ...fields }
       setRules(rs => rs.map(r => r.id === rule.id ? saved : r))
     } else {
       saved = { id: crypto.randomUUID(), user_id: userId, last_added_month: null, created_at: new Date().toISOString(), ...fields }
       const { error } = await supabase.from('recurring_expenses').insert(saved)
-      if (error) { console.error('recurring insert error:', error); showToast('Failed to save', 'error'); return false }
+      if (error) { console.error('recurring insert error:', error); showToast("Couldn't save. Try again.", 'error'); return false }
       setRules(rs => [...rs, saved].sort((a, b) => a.day_of_month - b.day_of_month))
     }
     const added = await addDueRecurring([saved])
     if (added) {
-      showToast(`Added to ${monthLabel(currentMonth)}`)
+      showToast(`Added to your ${monthLabel(currentMonth)} expenses`)
       setRefresh(n => n + 1)
     }
     return true
@@ -329,7 +329,7 @@ export default function App({ userId }) {
   async function deleteRule(rule) {
     if (!requireOnline()) return false
     const { error } = await supabase.from('recurring_expenses').delete().eq('id', rule.id)
-    if (error) { console.error('recurring delete error:', error); showToast('Failed to delete', 'error'); return false }
+    if (error) { console.error('recurring delete error:', error); showToast("Couldn't delete. Try again.", 'error'); return false }
     setRules(rs => rs.filter(r => r.id !== rule.id))
     return true
   }
@@ -422,7 +422,7 @@ export default function App({ userId }) {
         {budgetRows.length > 0 && <BudgetCard rows={budgetRows} onManage={() => setView('manage')} />}
 
         {(allItems.length > 0 || filtering) && (
-          <div className="filters fade-up">
+          <div className="filters">
             <div className="search">
               <input className="input" type="search" placeholder="Search notes or categories" aria-label="Search"
                 value={filter.query} onChange={e => setFilter(f => ({ ...f, query: e.target.value }))} />
@@ -431,7 +431,7 @@ export default function App({ userId }) {
               onChange={id => setFilter(f => ({ ...f, categoryId: id }))} />
             {filtering && (
               <div className="filter-result">
-                <span>{shown.length} {shown.length === 1 ? 'result' : 'results'}{shownSpent ? ` · ${formatIDR(shownSpent)} spent` : ''}</span>
+                <span>{shown.length} {shown.length === 1 ? 'match' : 'matches'}{shownSpent ? `, ${formatIDR(shownSpent)} spent` : ''}</span>
                 <button className="link-btn" onClick={() => setFilter({ categoryId: null, query: '' })}>Clear</button>
               </div>
             )}
@@ -439,13 +439,15 @@ export default function App({ userId }) {
         )}
 
         {loadedMonth === month && allItems.length === 0 && (
-          <div className="empty fade-up">
-            No expenses in {monthLabel(month)}.
+          <div className="empty">
+            {month === currentMonth
+              ? 'Nothing here yet this month. Tap + to add your first expense.'
+              : `No expenses in ${monthLabel(month)}.`}
           </div>
         )}
 
         {filtering && allItems.length > 0 && shown.length === 0 && (
-          <div className="empty fade-up">Nothing matches.</div>
+          <div className="empty">Nothing matches this search. Try another word or clear the filter.</div>
         )}
 
         <ExpenseList items={shown} categories={categories} today={today}

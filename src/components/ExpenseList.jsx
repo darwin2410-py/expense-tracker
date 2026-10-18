@@ -4,7 +4,7 @@ export default function ExpenseList({ items, categories, today, onEdit }) {
   const byId = new Map(categories.map(c => [c.id, c]))
 
   return groupByDay(items).map(group => (
-    <section key={group.date} className="day fade-up">
+    <section key={group.date} className="day">
       <div className="day-head">
         <span>{dayLabel(group.date, today)}</span>
         {group.total > 0 && <span>{formatIDR(group.total)}</span>}

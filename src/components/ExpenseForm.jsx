@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CategoryPicker from './CategoryPicker'
 import Chip from './Chip'
 import { formatNumber, parseAmount, getTodayKey, getMonthKey, monthLabel, ordinal, recurringDate } from '../utils'
@@ -28,11 +28,33 @@ export default function ExpenseForm({ entry, mode = 'entry', categories, default
   // month when asked, so a bill paid by hand is not counted twice
   const askAddNow = recurring && !editing && recurringDate(getMonthKey(today), dayNumber) <= today
 
+  const sheetRef = useRef(null)
+
   useEffect(() => {
     const onKey = e => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Keep keyboard focus inside the sheet while it is open, and return it to
+  // whatever opened the sheet afterwards
+  useEffect(() => {
+    const sheet = sheetRef.current
+    const opener = document.activeElement
+    if (!sheet.contains(document.activeElement)) sheet.focus()
+    function trap(e) {
+      if (e.key !== 'Tab') return
+      const items = [...sheet.querySelectorAll('button:not(:disabled), input, [tabindex="0"]')]
+      const first = items[0], last = items[items.length - 1]
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === sheet)) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    sheet.addEventListener('keydown', trap)
+    return () => {
+      sheet.removeEventListener('keydown', trap)
+      if (opener && document.contains(opener)) opener.focus()
+    }
+  }, [])
 
   function changeAmount(value) {
     const n = parseAmount(value)
@@ -81,14 +103,14 @@ export default function ExpenseForm({ entry, mode = 'entry', categories, default
 
   return (
     <div className="overlay sheet-wrap" onClick={e => e.target === e.currentTarget && onClose()}>
-      <form className="sheet" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <form className="sheet" ref={sheetRef} tabIndex={-1} onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="sheet-title">
         <h2 id="sheet-title" className="serif">{title}</h2>
 
         {!editing && !recurring && (
-          <div className="segmented" role="tablist">
-            <button type="button" role="tab" aria-selected={!income} className={!income ? 'active' : ''}
+          <div className="segmented" role="group" aria-label="Type">
+            <button type="button" aria-pressed={!income} className={!income ? 'active' : ''}
               onClick={() => setKind('expense')}>Expense</button>
-            <button type="button" role="tab" aria-selected={income} className={income ? 'active income' : ''}
+            <button type="button" aria-pressed={income} className={income ? 'active income' : ''}
               onClick={() => setKind('income')}>Income</button>
           </div>
         )}

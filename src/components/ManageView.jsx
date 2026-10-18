@@ -47,9 +47,9 @@ function CategoryRow({ category, onUpdate, onDelete }) {
       <input className="input" value={name} maxLength={40} aria-label="Category name"
         onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} autoFocus />
       <ColorSwatches value={color} onChange={setColor} />
-      {confirming && <p className="field-hint">Its expenses become Uncategorized and its budget is removed. Tap Delete again to confirm.</p>}
+      {confirming && <p className="field-hint">Expenses in {category.name} stay, without a category. Its budget is removed.</p>}
       <div className="edit-actions">
-        <button className="btn danger" onClick={remove} disabled={busy}>{confirming ? 'Delete for good' : 'Delete'}</button>
+        <button className="btn danger" onClick={remove} disabled={busy}>{confirming ? `Delete ${category.name}` : 'Delete'}</button>
         <button className="btn muted" onClick={() => setOpen(false)}>Cancel</button>
         <button className="btn primary" onClick={save} disabled={busy || !name.trim()}>Save</button>
       </div>
@@ -126,7 +126,7 @@ export default function ManageView({ categories, budgets, rules, theme, onToggle
   return (
     <div className="page dotted">
       <div className="container">
-        <div className="monthly-header fade-up">
+        <div className="monthly-header">
           <button className="btn-outline soft" onClick={onBack}>&#8249; Back</button>
           <h1 className="serif">Settings</h1>
           <button className="btn-outline btn-theme push-right" onClick={onToggleTheme}
@@ -135,12 +135,12 @@ export default function ManageView({ categories, budgets, rules, theme, onToggle
           </button>
         </div>
 
-        <div className="chip-row range-tabs fade-up">
+        <div className="chip-row range-tabs">
           {TABS.map(t => <Chip key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>{t.label}</Chip>)}
         </div>
 
         {tab === 'categories' && <>
-          <div className="card manage-list fade-up">
+          <div className="card manage-list">
             {categories.map(c => (
               <CategoryRow key={c.id} category={c} onUpdate={onUpdateCategory} onDelete={onDeleteCategory} />
             ))}
@@ -150,7 +150,7 @@ export default function ManageView({ categories, budgets, rules, theme, onToggle
 
         {tab === 'budgets' && <>
           <p className="manage-hint">Budgets repeat every month. Leave a field empty for no budget.</p>
-          <div className="card manage-list fade-up">
+          <div className="card manage-list">
             <BudgetRow key={`all-${budgetFor(null)?.amount}`} label="All spending" budget={budgetFor(null)}
               onSave={amount => onSaveBudget(null, amount)} />
             {categories.map(c => (
@@ -165,7 +165,7 @@ export default function ManageView({ categories, budgets, rules, theme, onToggle
             Bills that come back every month. Each one is added to your expenses on its day, the first time you open the app on or after it.
           </p>
           {rules.length > 0 && (
-            <div className="card manage-list fade-up">
+            <div className="card manage-list">
               {rules.map(r => {
                 const cat = catById.get(r.category_id)
                 return (
@@ -173,7 +173,7 @@ export default function ManageView({ categories, budgets, rules, theme, onToggle
                     <span className={`chip-dot${cat ? '' : ' none'}`} style={cat ? { '--chip-color': cat.color } : undefined} />
                     <span className="manage-row-main">
                       <span className="manage-row-name">{r.note || cat?.name || 'Recurring expense'}</span>
-                      <span className="manage-row-sub">Every {ordinal(r.day_of_month)}{cat ? ` · ${cat.name}` : ''}</span>
+                      <span className="manage-row-sub">{cat ? `${cat.name}, every` : 'Every'} {ordinal(r.day_of_month)}</span>
                     </span>
                     <span className="manage-row-amount">{formatIDR(r.amount)}</span>
                   </button>

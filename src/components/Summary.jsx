@@ -25,7 +25,7 @@ export default function Summary({ month, isCurrentMonth, expenses, incomeTotal, 
         <div className="income-line">
           <span>Income <b>{formatIDR(incomeTotal)}</b></span>
           <span className={balance < 0 ? 'negative' : 'positive'}>
-            {balance < 0 ? 'Over' : 'Left'} <b>{formatIDR(Math.abs(balance))}</b>
+            {balance < 0 ? 'Overspent' : 'Left over'} <b>{formatIDR(Math.abs(balance))}</b>
           </span>
         </div>
       )}

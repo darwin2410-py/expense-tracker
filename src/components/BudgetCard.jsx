@@ -2,7 +2,7 @@ import { formatIDR } from '../utils'
 
 export default function BudgetCard({ rows, onManage }) {
   return (
-    <div className="card budgets fade-up" style={{ animationDelay: '0.08s' }}>
+    <div className="card budgets">
       <div className="budgets-head">
         <span className="summary-label">Budgets</span>
         <button className="link-btn" onClick={onManage}>Edit</button>
